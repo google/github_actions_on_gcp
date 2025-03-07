@@ -35,7 +35,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// gcloud run deploy webhook-go --region=us-west1 --source . --update-secrets=/etc/secrets/webhook/key=${KEY_NAME}:latest --allow-unauthenticated --set-env-vars=APP_ID=${APP_ID},TRIGGER_ID=${TRIGGER_ID},PROJECT_ID=${PROJECT_ID},KEY_ID=${KEY_ID},TRIGGER_NAME=${TRIGGER_NAME},LOCATION=${LOCATION}
+// gcloud run deploy webhook-go --region=us-west1 --source . --update-secrets=${WEBHOOK_KEY_PATH}=${KEY_NAME}:latest --allow-unauthenticated --set-env-vars=APP_ID=${APP_ID},TRIGGER_ID=${TRIGGER_ID},PROJECT_ID=${PROJECT_ID},KEY_ID=${KEY_ID},TRIGGER_NAME=${TRIGGER_NAME},LOCATION=${LOCATION},WEBHOOK_KEY_PATH=${WEBHOOK_KEY_PATH}
 
 type Server struct {
 	logger           *slog.Logger
@@ -113,7 +113,8 @@ func realMain(ctx context.Context, logger *slog.Logger) error {
 }
 
 func getWebhookSecret(ctx context.Context, logger *slog.Logger) ([]byte, error) {
-	webhookSecret, err := os.ReadFile("/etc/secrets/webhook/key")
+	webhookKeyPath := os.Getenv("WEBHOOK_KEY_PATH")
+	webhookSecret, err := os.ReadFile(webhookKeyPath)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to read webhook secret", "error", err)
 		return nil, err
