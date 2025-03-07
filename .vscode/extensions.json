@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "googlecloudtools.cloudcode",
+    "ms-azuretools.vscode-docker",
+    "golang.go",
+    "bmalehorn.shell-syntax"
+  ]
+}
