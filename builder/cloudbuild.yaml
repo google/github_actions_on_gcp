@@ -2,9 +2,9 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   id: 'build'
   script: |
-    docker build -t $LOCATION-docker.pkg.dev/$PROJECT_ID/$_CONTAINER_REPOSITORY/github-actions-runner:latest builder/.
+    'docker build -t $LOCATION-docker.pkg.dev/$PROJECT_ID/$_CONTAINER_REPOSITORY/github-actions-runner:latest builder/.'
   automapSubstitutions: true
 images:
 - '$LOCATION-docker.pkg.dev/$PROJECT_ID/$_CONTAINER_REPOSITORY/github-actions-runner:latest'
 options:
-  logging: CLOUD_LOGGING_ONLY
+  logging: 'CLOUD_LOGGING_ONLY'

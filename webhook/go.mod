@@ -1,4 +1,4 @@
-module webhook-go
+module webhook
 
 go 1.24
 

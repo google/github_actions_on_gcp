@@ -1,4 +1,4 @@
-FROM ubuntu
+FROM ubuntu:24.04
 
 # References:
 # https://github.com/docker-library/docker/blob/master/27/dind-rootless/Dockerfile
@@ -28,10 +28,10 @@ RUN mkdir /run/user/$RUNNER_UID \
 # Dynamically find and download the latest runner version.
 RUN cd /home/runner && mkdir actions-runner && cd actions-runner \
     && curl -o actions-runner-linux-x64.tar.gz \
-        -L $(curl -s https://api.github.com/repos/actions/runner/releases/latest \
-            | grep browser_download_url \
-            | grep actions-runner-linux-x64 \
-            | cut -d'"' -f4) \
+    -L $(curl -s https://api.github.com/repos/actions/runner/releases/latest \
+    | grep browser_download_url \
+    | grep actions-runner-linux-x64 \
+    | cut -d'"' -f4) \
     && tar xzf ./actions-runner-linux-x64.tar.gz
 
 RUN chown -R runner ~runner && /home/runner/actions-runner/bin/installdependencies.sh
