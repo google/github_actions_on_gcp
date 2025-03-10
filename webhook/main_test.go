@@ -149,7 +149,7 @@ func TestHandleWebhook(t *testing.T) {
 			}
 
 			// GitHub base URL expects a trailing slash
-			baseUrl, err := url.Parse(fmt.Sprintf("%s/", fakeGitHub.URL))
+			baseURL, err := url.Parse(fmt.Sprintf("%s/", fakeGitHub.URL))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -164,7 +164,7 @@ func TestHandleWebhook(t *testing.T) {
 				webhookSecret:    []byte(tc.payloadWebhookSecret),
 				appClient:        app,
 				cloudBuildClient: cloudBuildClientStub,
-				baseUrl:          baseUrl,
+				baseURL:          baseURL,
 			}
 			srv.handler(resp, req)
 

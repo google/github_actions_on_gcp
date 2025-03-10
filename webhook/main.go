@@ -26,6 +26,7 @@ import (
 	"slices"
 	"strconv"
 	"syscall"
+	"time"
 
 	cloudbuild "cloud.google.com/go/cloudbuild/apiv1/v2"
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
@@ -46,7 +47,7 @@ type Server struct {
 	webhookSecret    []byte
 	appClient        *githubauth.App
 	cloudBuildClient CloudBuildClient
-	baseUrl          *url.URL
+	baseURL          *url.URL
 }
 
 type CloudBuildClient interface {
@@ -109,7 +110,11 @@ func realMain(ctx context.Context, logger *slog.Logger) error {
 		logger.InfoContext(ctx, "defaulting to port", "port", port)
 	}
 	logger.InfoContext(ctx, "starting server on port", "port", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	httpServer := &http.Server{
+		Addr:              ":" + port,
+		ReadHeaderTimeout: 3 * time.Second,
+	}
+	if err := httpServer.ListenAndServe(); err != nil {
 		logger.ErrorContext(ctx, "http server error", "error", err)
 		return err
 	}
@@ -136,8 +141,8 @@ func getKeyManagementClient(ctx context.Context, logger *slog.Logger) (*kms.KeyM
 }
 
 func getSigner(ctx context.Context, logger *slog.Logger, kmsClient *kms.KeyManagementClient) (*gcpkms.Signer, error) {
-	keyId := os.Getenv("KEY_ID")
-	signer, err := gcpkms.NewSigner(ctx, kmsClient, keyId)
+	keyID := os.Getenv("KEY_ID")
+	signer, err := gcpkms.NewSigner(ctx, kmsClient, keyID)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create app signer", "error", err)
 		return nil, err
@@ -146,8 +151,8 @@ func getSigner(ctx context.Context, logger *slog.Logger, kmsClient *kms.KeyManag
 }
 
 func getAppClient(ctx context.Context, logger *slog.Logger, signer *gcpkms.Signer) (*githubauth.App, error) {
-	appId := os.Getenv("APP_ID")
-	app, err := githubauth.NewApp(appId, signer)
+	appID := os.Getenv("APP_ID")
+	app, err := githubauth.NewApp(appID, signer)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to setup app client", "error", err)
 		return nil, err
@@ -207,8 +212,8 @@ func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
 			"administration": "write",
 		}))
 		gh := github.NewClient(httpClient)
-		if s.baseUrl != nil {
-			gh.BaseURL = s.baseUrl
+		if s.baseURL != nil {
+			gh.BaseURL = s.baseURL
 		}
 
 		// Note that even though event.WorkflowJob.RunID is used for a dynamic string, it's not
@@ -221,14 +226,14 @@ func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		projectId := os.Getenv("PROJECT_ID")
+		projectID := os.Getenv("PROJECT_ID")
 		location := os.Getenv("LOCATION")
 		triggerName := os.Getenv("TRIGGER_NAME")
-		triggerId := os.Getenv("TRIGGER_ID")
+		triggerID := os.Getenv("TRIGGER_ID")
 		buildReq := &cloudbuildpb.RunBuildTriggerRequest{
-			Name:      fmt.Sprintf("projects/%s/locations/%s/triggers/%s", projectId, location, triggerName),
-			ProjectId: projectId,
-			TriggerId: triggerId,
+			Name:      fmt.Sprintf("projects/%s/locations/%s/triggers/%s", projectID, location, triggerName),
+			ProjectId: projectID,
+			TriggerId: triggerID,
 			Source: &cloudbuildpb.RepoSource{
 				Substitutions: map[string]string{
 					"_ENCODED_JIT_CONFIG": *jitconfig.EncodedJITConfig,
