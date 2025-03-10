@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"syscall"
 
@@ -41,7 +42,6 @@ type Server struct {
 	logger           *slog.Logger
 	ctx              context.Context
 	webhookSecret    []byte
-	kmsClient        *kms.KeyManagementClient
 	signer           *gcpkms.Signer
 	appClient        *githubauth.App
 	cloudBuildClient *cloudbuild.Client
@@ -91,7 +91,6 @@ func realMain(ctx context.Context, logger *slog.Logger) error {
 		logger:           logger,
 		ctx:              ctx,
 		webhookSecret:    webhookSecret,
-		kmsClient:        kmsClient,
 		signer:           signer,
 		appClient:        appClient,
 		cloudBuildClient: cloudBuildClient,
@@ -180,7 +179,13 @@ func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
 	switch event := event.(type) {
 	case *github.WorkflowJobEvent:
 		if event.Action == nil || *event.Action != "queued" {
-			s.logger.InfoContext(s.ctx, "no action taken for action", "action", *event.Action)
+			s.logger.InfoContext(s.ctx, "no action taken for action type", "action", *event.Action)
+			resp.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		if !slices.Contains(event.WorkflowJob.Labels, "self-hosted") {
+			s.logger.InfoContext(s.ctx, "no action taken for labels", "labels", event.WorkflowJob.Labels)
 			resp.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -231,6 +236,7 @@ func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		s.logger.InfoContext(s.ctx, "started runner", "runner_id", fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID))
 		resp.WriteHeader(http.StatusNoContent)
 	}
 }
