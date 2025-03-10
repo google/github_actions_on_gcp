@@ -1,0 +1,63 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "go: build",
+      "command": "go",
+      "type": "shell",
+      "args": ["build", "-v", "./..."],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$go"],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "go: test",
+      "command": "go",
+      "type": "shell",
+      "args": ["test", "-v", "./..."],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": ["$go"],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "go: mod tidy",
+      "command": "go",
+      "type": "shell",
+      "args": ["mod", "tidy"],
+      "problemMatcher": ["$go"],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "go: vet",
+      "command": "go",
+      "type": "shell",
+      "args": ["vet", "./..."],
+      "problemMatcher": ["$go"],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "go: lint",
+      "command": "golangci-lint",
+      "type": "shell",
+      "args": ["run", "./..."],
+      "problemMatcher": ["$go"],
+      "presentation": {
+        "reveal": "silent"
+      }
+    }
+  ]
+}
