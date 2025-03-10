@@ -1,301 +1,199 @@
+// Copyright 2025 The Authors (see AUTHORS file)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
+	"strings"
+
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"reflect"
-	"strings"
+	"net/url"
 	"testing"
 
+	cloudbuild "cloud.google.com/go/cloudbuild/apiv1/v2"
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
-	"github.com/google/go-github/v69/github" // Update version if needed
-	"golang.org/x/oauth2"
+	"github.com/abcxyz/pkg/githubauth"
+	"github.com/abcxyz/pkg/logging"
+	"github.com/google/go-github/v69/github"
+	"github.com/googleapis/gax-go/v2"
+	// "github.com/abcxyz/pkg/renderer"
 )
 
-// Mock structs for dependencies (replace with your actual implementations if possible)
+const (
+	SHA256SignatureHeader     = "X-Hub-Signature-256"
+	EventTypeHeader           = "X-Github-Event"
+	DeliveryIDHeader          = "X-Github-Delivery"
+	ContentTypeHeader         = "Content-Type"
+	serverGitHubWebhookSecret = "test-github-webhook-secret"
+)
 
-type mockGithubAuthApp struct {
-	installation *mockInstallation
-	err          error
-}
+func TestHandleWebhook(t *testing.T) {
+	t.Parallel()
 
-type mockInstallation struct {
-	ID                        int64
-	Name                      string
-	AllReposOAuth2TokenSource func(ctx context.Context, scopes map[string]string) oauth2.TokenSource
-}
-
-func (m *mockGithubAuthApp) InstallationForID(ctx context.Context, id string) (*mockInstallation, error) {
-	return m.installation, m.err
-}
-
-type mockGithubClient struct {
-	jitConfig *github.JITRunnerConfig
-	err       error
-	resp      *github.Response
-}
-
-func (m *mockGithubClient) GenerateRepoJITConfig(ctx context.Context, owner, repo string, req *github.GenerateJITConfigRequest) (*github.JITRunnerConfig, *github.Response, error) {
-	return m.jitConfig, m.resp, m.err
-}
-
-type mockCloudBuildClient struct {
-	build *cloudbuildpb.Build
-	err   error
-}
-
-func (m *mockCloudBuildClient) RunBuildTrigger(ctx context.Context, req *cloudbuildpb.RunBuildTriggerRequest, opts ...any) (*cloudbuildpb.Build, error) {
-	return m.build, m.err
-}
-
-type mockKMSClient struct {
-	t *testing.T
-}
-
-func (m *mockKMSClient) Close() error { return nil }
-
-type mockSigner struct {
-	t *testing.T
-}
-
-func (m *mockSigner) Sign(ctx context.Context, data []byte) ([]byte, error) {
-	return []byte("signed"), nil
-}
-
-// Test cases
-
-func TestServerHandler(t *testing.T) {
-	testCases := []struct {
-		name           string
-		event          string
-		action         string
-		installationID string
-		expectedStatus int
-		mockGithub     *mockGithubClient
-		mockAuth       *mockGithubAuthApp
-		mockCloudBuild *mockCloudBuildClient
-		wantErr        bool
+	ctx := t.Context()
+	cases := []struct {
+		name                 string
+		payloadType          string
+		action               string
+		payloadWebhookSecret string
+		contentType          string
+		expStatusCode        int
+		expRespBody          string
 	}{
 		{
-			name:           "Successful Workflow Job Queued",
-			event:          `{"action": "queued", "workflow_job": {"id": 1, "run_id": 12345}, "installation": {"id": 123}, "organization": {"login": "test-org"}, "repository": {"name": "test-repo"}}`,
-			action:         "queued",
-			installationID: "123",
-			expectedStatus: http.StatusNoContent,
-			mockGithub: &mockGithubClient{
-				jitConfig: &github.JITRunnerConfig{EncodedJITConfig: github.String("encoded_jit_config")},
-			},
-			mockAuth: &mockGithubAuthApp{
-				installation: &mockInstallation{
-					ID:   123,
-					Name: "test-installation",
-					AllReposOAuth2TokenSource: func(ctx context.Context, scopes map[string]string) oauth2.TokenSource {
-						return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "test-token"})
-					},
-				},
-			},
-			mockCloudBuild: &mockCloudBuildClient{build: &cloudbuildpb.Build{}},
-		},
-		{
-			name:           "Workflow Job Not Queued",
-			event:          `{"action": "completed", "workflow_job": {"id": 1, "run_id": 12345}, "installation": {"id": 123}, "organization": {"login": "test-org"}, "repository": {"name": "test-repo"}}`,
-			action:         "completed",
-			installationID: "123",
-			expectedStatus: http.StatusNoContent,
-			mockGithub:     &mockGithubClient{},
-			mockAuth:       &mockGithubAuthApp{},
-			mockCloudBuild: &mockCloudBuildClient{},
-		},
-		{
-			name:           "Error Getting Installation",
-			event:          `{"action": "queued", "workflow_job": {"id": 1, "run_id": 12345}, "installation": {"id": 123}, "organization": {"login": "test-org"}, "repository": {"name": "test-repo"}}`,
-			action:         "queued",
-			installationID: "123",
-			expectedStatus: http.StatusInternalServerError,
-			mockGithub:     &mockGithubClient{},
-			mockAuth:       &mockGithubAuthApp{err: errors.New("installation not found")},
-			mockCloudBuild: &mockCloudBuildClient{},
-			wantErr:        true,
-		},
-		{
-			name:           "Error Generating JIT Config",
-			event:          `{"action": "queued", "workflow_job": {"id": 1, "run_id": 12345}, "installation": {"id": 123}, "organization": {"login": "test-org"}, "repository": {"name": "test-repo"}}`,
-			action:         "queued",
-			installationID: "123",
-			expectedStatus: http.StatusInternalServerError,
-			mockGithub:     &mockGithubClient{err: errors.New("failed to generate jitconfig")},
-			mockAuth: &mockGithubAuthApp{
-				installation: &mockInstallation{
-					ID:   123,
-					Name: "test-installation",
-					AllReposOAuth2TokenSource: func(ctx context.Context, scopes map[string]string) oauth2.TokenSource {
-						return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "test-token"})
-					},
-				},
-			},
-			mockCloudBuild: &mockCloudBuildClient{},
-			wantErr:        true,
-		},
-		{
-			name:           "Error Running Cloud Build",
-			event:          `{"action": "queued", "workflow_job": {"id": 1, "run_id": 12345}, "installation": {"id": 123}, "organization": {"login": "test-org"}, "repository": {"name": "test-repo"}}`,
-			action:         "queued",
-			installationID: "123",
-			expectedStatus: http.StatusInternalServerError,
-			mockGithub: &mockGithubClient{
-				jitConfig: &github.JITRunnerConfig{EncodedJITConfig: github.String("encoded_jit_config")},
-			},
-			mockAuth: &mockGithubAuthApp{
-				installation: &mockInstallation{
-					ID:   123,
-					Name: "test-installation",
-					AllReposOAuth2TokenSource: func(ctx context.Context, scopes map[string]string) oauth2.TokenSource {
-						return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "test-token"})
-					},
-				},
-			},
-			mockCloudBuild: &mockCloudBuildClient{err: errors.New("failed to run build")},
-			wantErr:        true,
+			name:                 "Foo",
+			payloadType:          "workflow_job",
+			action:               "queued",
+			payloadWebhookSecret: serverGitHubWebhookSecret,
+			contentType:          "application/json",
+			expStatusCode:        204,
+			expRespBody:          "",
 		},
 	}
 
-	for _, tc := range testCases {
+	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
-			logger := slog.Logger{}
-			os.Setenv("PROJECT_ID", "test-project")
-			os.Setenv("LOCATION", "us-west1")
-			os.Setenv("TRIGGER_NAME", "test-trigger")
-			os.Setenv("TRIGGER_ID", "test-trigger-id")
-			defer os.Unsetenv("PROJECT_ID")
-			defer os.Unsetenv("LOCATION")
-			defer os.Unsetenv("TRIGGER_NAME")
-			defer os.Unsetenv("TRIGGER_ID")
+			t.Parallel()
+			logger := logging.TestLogger(t)
 
-			server := &Server{
-				logger:           &logger,
-				ctx:              ctx,
-				webhookSecret:    []byte("test-secret"),
-				signer:           &mockSigner{t: t},
-				appClient:        tc.mockAuth,
-				cloudBuildClient: tc.mockCloudBuild,
-			}
-
-			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.event))
-			req.Header.Set("X-GitHub-Event", "workflow_job")
-			req.Header.Set("X-Hub-Signature-256", "sha256=test-signature") // Replace with actual signature validation
-
-			rr := httptest.NewRecorder()
-			server.handler(rr, req)
-
-			if rr.Code != tc.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v, want %v", rr.Code, tc.expectedStatus)
-			}
-
-			if tc.wantErr && len(rr.Body.String()) == 0 {
-				t.Error("expected error message in response body, but got none")
-			}
-		})
-	}
-}
-
-//Helper functions (mostly unchanged from previous response)
-
-func generateJITConfigRequest(event *github.WorkflowJobEvent) *github.GenerateJITConfigRequest {
-	return &github.GenerateJITConfigRequest{
-		Name:          fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID),
-		RunnerGroupID: 1,
-		Labels:        []string{"self-hosted", "Linux", "X64"},
-	}
-}
-
-func buildCloudBuildRequest(jitConfig string) *cloudbuildpb.RunBuildTriggerRequest {
-	projectId := os.Getenv("PROJECT_ID")
-	location := os.Getenv("LOCATION")
-	triggerName := os.Getenv("TRIGGER_NAME")
-	triggerId := os.Getenv("TRIGGER_ID")
-	return &cloudbuildpb.RunBuildTriggerRequest{
-		Name:      fmt.Sprintf("projects/%s/locations/%s/triggers/%s", projectId, location, triggerName),
-		ProjectId: projectId,
-		TriggerId: triggerId,
-		Source: &cloudbuildpb.RepoSource{
-			Substitutions: map[string]string{
-				"_ENCODED_JIT_CONFIG": jitConfig,
-			},
-		},
-	}
-}
-
-// Mock Logger (replace with your actual logging implementation)
-type mockLogger struct{}
-
-func (m *mockLogger) InfoContext(ctx context.Context, msg string, args ...any)  {}
-func (m *mockLogger) ErrorContext(ctx context.Context, msg string, args ...any) {}
-
-func Test_parseWebhook(t *testing.T) {
-	type args struct {
-		payload []byte
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *github.WorkflowJobEvent
-		wantErr bool
-	}{
-		{
-			name: "Valid Payload",
-			args: args{
-				payload: []byte(`{"action": "queued", "workflow_job": {"id": 1, "run_id": 12345}, "installation": {"id": 123}, "organization": {"login": "test-org"}, "repository": {"name": "test-repo"}}`),
-			},
-			want: &github.WorkflowJobEvent{
-				Action: github.String("queued"),
+			orgLogin := "google"
+			repoName := "webhook"
+			installationId := int64(123)
+			event := &github.WorkflowJobEvent{
+				Action: &tc.action,
 				WorkflowJob: &github.WorkflowJob{
-					ID:    github.Int64(1),
-					RunID: github.Int64(12345),
+					Labels: []string{"self-hosted"},
 				},
 				Installation: &github.Installation{
-					ID: github.Int64(123),
+					ID: &installationId,
 				},
 				Org: &github.Organization{
-					Login: github.String("test-org"),
+					Login: &orgLogin,
 				},
 				Repo: &github.Repository{
-					Name: github.String("test-repo"),
+					Name: &repoName,
 				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "Invalid Payload",
-			args: args{
-				payload: []byte(`invalid json`),
-			},
-			want:    nil,
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseWebhook(tt.args.payload)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseWebhook() error = %v, wantErr %v", err, tt.wantErr)
-				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseWebhook() = %v, want %v", got, tt.want)
+
+			payload, err := json.Marshal(event)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			encodedJitConfig := "Hello"
+			jit := &github.JITRunnerConfig{
+				EncodedJITConfig: &encodedJitConfig,
+			}
+			jitPayload, err := json.Marshal(jit)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fakeGitHub := func() *httptest.Server {
+				mux := http.NewServeMux()
+				mux.Handle("GET /app/installations/123", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprintf(w, `{"access_tokens_url": "http://%s/app/installations/123/access_tokens"}`, r.Host)
+				}))
+				mux.Handle("POST /app/installations/123/access_tokens", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(201)
+					fmt.Fprintf(w, `{"token": "this-is-the-token-from-github"}`)
+				}))
+				mux.Handle("POST /repos/google/webhook/actions/runners/generate-jitconfig", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(201)
+					fmt.Fprintf(w, "%s", string(jitPayload))
+				}))
+
+				return httptest.NewServer(mux)
+			}()
+			t.Cleanup(func() {
+				fakeGitHub.Close()
+			})
+
+			req := httptest.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
+			req.Header.Add(DeliveryIDHeader, "delivery-id")
+			req.Header.Add(EventTypeHeader, tc.payloadType)
+			req.Header.Add(ContentTypeHeader, tc.contentType)
+			req.Header.Add(SHA256SignatureHeader, fmt.Sprintf("sha256=%s", createSignature([]byte(tc.payloadWebhookSecret), payload)))
+
+			resp := httptest.NewRecorder()
+
+			rsaPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			app, err := githubauth.NewApp("app-id", rsaPrivateKey, githubauth.WithBaseURL(fakeGitHub.URL))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// GitHub base URL expects a trailing slash
+			baseUrl, err := url.Parse(fmt.Sprintf("%s/", fakeGitHub.URL))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cloudBuildClientStub := &CloudBuildClientStub{
+				runBuildTriggerRet: &cloudbuild.RunBuildTriggerOperation{},
+			}
+
+			srv := &Server{
+				logger:           logger,
+				ctx:              ctx,
+				webhookSecret:    []byte(tc.payloadWebhookSecret),
+				appClient:        app,
+				cloudBuildClient: cloudBuildClientStub,
+				baseUrl:          baseUrl,
+			}
+			srv.handler(resp, req)
+
+			if got, want := resp.Code, tc.expStatusCode; got != want {
+				t.Errorf("expected %d to be %d", got, want)
+			}
+
+			if got, want := strings.TrimSpace(resp.Body.String()), tc.expRespBody; got != want {
+				t.Errorf("expected %q to be %q", got, want)
 			}
 		})
 	}
 }
 
-func parseWebhook(payload []byte) (*github.WorkflowJobEvent, error) {
-	var event github.WorkflowJobEvent
-	err := json.Unmarshal(payload, &event)
-	return &event, err
+// createSignature creates a HMAC 256 signature for the test request payload.
+func createSignature(key, payload []byte) string {
+	mac := hmac.New(sha256.New, key)
+	mac.Write(payload)
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+type CloudBuildClientStub struct {
+	runBuildTriggerRet *cloudbuild.RunBuildTriggerOperation
+	runBuildTriggerErr error
+}
+
+func (c *CloudBuildClientStub) RunBuildTrigger(ctx context.Context, req *cloudbuildpb.RunBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuild.RunBuildTriggerOperation, error) {
+	if c.runBuildTriggerErr != nil {
+		return nil, c.runBuildTriggerErr
+	}
+	return c.runBuildTriggerRet, nil
 }

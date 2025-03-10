@@ -20,6 +20,7 @@ import (
 	"html"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"slices"
@@ -32,6 +33,7 @@ import (
 	"github.com/abcxyz/pkg/githubauth"
 	"github.com/abcxyz/pkg/logging"
 	"github.com/google/go-github/v69/github"
+	"github.com/googleapis/gax-go/v2"
 	"github.com/sethvargo/go-gcpkms/pkg/gcpkms"
 	"golang.org/x/oauth2"
 )
@@ -42,9 +44,13 @@ type Server struct {
 	logger           *slog.Logger
 	ctx              context.Context
 	webhookSecret    []byte
-	signer           *gcpkms.Signer
 	appClient        *githubauth.App
-	cloudBuildClient *cloudbuild.Client
+	cloudBuildClient CloudBuildClient
+	baseUrl          *url.URL
+}
+
+type CloudBuildClient interface {
+	RunBuildTrigger(ctx context.Context, req *cloudbuildpb.RunBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuild.RunBuildTriggerOperation, error)
 }
 
 func main() {
@@ -91,7 +97,6 @@ func realMain(ctx context.Context, logger *slog.Logger) error {
 		logger:           logger,
 		ctx:              ctx,
 		webhookSecret:    webhookSecret,
-		signer:           signer,
 		appClient:        appClient,
 		cloudBuildClient: cloudBuildClient,
 	}
@@ -198,10 +203,13 @@ func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		httpClient := oauth2.NewClient(s.ctx, installation.AllReposOAuth2TokenSource(s.ctx, map[string]string{
+		httpClient := oauth2.NewClient(s.ctx, (*installation).AllReposOAuth2TokenSource(s.ctx, map[string]string{
 			"administration": "write",
 		}))
 		gh := github.NewClient(httpClient)
+		if s.baseUrl != nil {
+			gh.BaseURL = s.baseUrl
+		}
 
 		// Note that even though event.WorkflowJob.RunID is used for a dynamic string, it's not
 		// guaranteed that particular job will run on this specific runner.
