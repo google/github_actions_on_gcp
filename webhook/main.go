@@ -33,10 +33,11 @@ import (
 	kms "cloud.google.com/go/kms/apiv1"
 	"github.com/abcxyz/pkg/githubauth"
 	"github.com/abcxyz/pkg/logging"
-	"github.com/google/go-github/v69/github"
-	"github.com/googleapis/gax-go/v2"
 	"github.com/sethvargo/go-gcpkms/pkg/gcpkms"
 	"golang.org/x/oauth2"
+
+	"github.com/google/go-github/v69/github"
+	"github.com/googleapis/gax-go/v2"
 )
 
 // gcloud run deploy webhook-go --region=us-west1 --source . --update-secrets=${WEBHOOK_KEY_PATH}=${KEY_NAME}:latest --allow-unauthenticated --set-env-vars=APP_ID=${APP_ID},TRIGGER_ID=${TRIGGER_ID},PROJECT_ID=${PROJECT_ID},KEY_ID=${KEY_ID},TRIGGER_NAME=${TRIGGER_NAME},LOCATION=${LOCATION},WEBHOOK_KEY_PATH=${WEBHOOK_KEY_PATH}

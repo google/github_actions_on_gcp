@@ -17,27 +17,26 @@ package webhook
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"strings"
-
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	cloudbuild "cloud.google.com/go/cloudbuild/apiv1/v2"
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 	"github.com/abcxyz/pkg/githubauth"
 	"github.com/abcxyz/pkg/logging"
+
 	"github.com/google/go-github/v69/github"
 	"github.com/googleapis/gax-go/v2"
-	// "github.com/abcxyz/pkg/renderer"
 )
 
 const (
