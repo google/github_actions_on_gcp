@@ -1,7 +1,7 @@
 {
   "files.insertFinalNewline": true,
-  "yaml.format.singleQuote": true
-  // Not sure if golangci-lint is working
-  // "go.lintTool": "golangci-lint",
-  // "go.lintFlags": ["--fast"]
+  "yaml.format.singleQuote": true,
+  "go.formatTool": "gofumpt",
+  "go.lintTool": "golangci-lint",
+  "go.lintFlags": ["--fast"]
 }

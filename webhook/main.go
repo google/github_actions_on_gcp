@@ -44,7 +44,6 @@ import (
 
 type Server struct {
 	logger           *slog.Logger
-	ctx              context.Context
 	webhookSecret    []byte
 	appClient        *githubauth.App
 	cloudBuildClient CloudBuildClient
@@ -55,6 +54,7 @@ type CloudBuildClient interface {
 	RunBuildTrigger(ctx context.Context, req *cloudbuildpb.RunBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuild.RunBuildTriggerOperation, error)
 }
 
+//nolint:unused // main is the entry point of the program and is called by Cloud Run.
 func main() {
 	ctx, done := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer done()
@@ -69,6 +69,7 @@ func main() {
 	}
 }
 
+//nolint:unused
 func realMain(ctx context.Context, logger *slog.Logger) error {
 	webhookSecret, err := getWebhookSecret(ctx, logger)
 	if err != nil {
@@ -97,7 +98,6 @@ func realMain(ctx context.Context, logger *slog.Logger) error {
 
 	server := &Server{
 		logger:           logger,
-		ctx:              ctx,
 		webhookSecret:    webhookSecret,
 		appClient:        appClient,
 		cloudBuildClient: cloudBuildClient,
@@ -117,7 +117,7 @@ func realMain(ctx context.Context, logger *slog.Logger) error {
 	}
 	if err := httpServer.ListenAndServe(); err != nil {
 		logger.ErrorContext(ctx, "http server error", "error", err)
-		return err
+		return fmt.Errorf("http server failed: %w", err)
 	}
 	return nil
 }
@@ -127,7 +127,7 @@ func getWebhookSecret(ctx context.Context, logger *slog.Logger) ([]byte, error) 
 	webhookSecret, err := os.ReadFile(webhookKeyPath)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to read webhook secret", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to read webhook secret: %w", err)
 	}
 	return webhookSecret, nil
 }
@@ -136,7 +136,7 @@ func getKeyManagementClient(ctx context.Context, logger *slog.Logger) (*kms.KeyM
 	kmsClient, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create kms client", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to create kms client: %w", err)
 	}
 	return kmsClient, nil
 }
@@ -146,7 +146,7 @@ func getSigner(ctx context.Context, logger *slog.Logger, kmsClient *kms.KeyManag
 	signer, err := gcpkms.NewSigner(ctx, kmsClient, keyID)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create app signer", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to create app signer: %w", err)
 	}
 	return signer, nil
 }
@@ -156,7 +156,7 @@ func getAppClient(ctx context.Context, logger *slog.Logger, signer *gcpkms.Signe
 	app, err := githubauth.NewApp(appID, signer)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to setup app client", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to setup app client: %w", err)
 	}
 	return app, nil
 }
@@ -165,15 +165,16 @@ func getCloudBuildClient(ctx context.Context, logger *slog.Logger) (*cloudbuild.
 	client, err := cloudbuild.NewClient(ctx)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create cloudbuild client", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to create cloudbuild client: %w", err)
 	}
 	return client, nil
 }
 
 func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
+	ctx := logging.WithLogger(req.Context(), s.logger)
 	payload, err := github.ValidatePayload(req, s.webhookSecret)
 	if err != nil {
-		s.logger.ErrorContext(s.ctx, "failed to validate payload", "error", err)
+		s.logger.ErrorContext(ctx, "failed to validate payload", "error", err)
 		fmt.Fprint(resp, html.EscapeString("failed to validate payload"))
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
@@ -181,7 +182,7 @@ func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
 
 	event, err := github.ParseWebHook(github.WebHookType(req), payload)
 	if err != nil {
-		s.logger.ErrorContext(s.ctx, "failed to parse webhook", "error", err)
+		s.logger.ErrorContext(ctx, "failed to parse webhook", "error", err)
 		fmt.Fprint(resp, html.EscapeString("failed to parse webhook"))
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
@@ -190,26 +191,26 @@ func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
 	switch event := event.(type) {
 	case *github.WorkflowJobEvent:
 		if event.Action == nil || *event.Action != "queued" {
-			s.logger.InfoContext(s.ctx, "no action taken for action type", "action", *event.Action)
+			s.logger.InfoContext(ctx, "no action taken for action type", "action", *event.Action)
 			resp.WriteHeader(http.StatusNoContent)
 			return
 		}
 
 		if !slices.Contains(event.WorkflowJob.Labels, "self-hosted") {
-			s.logger.InfoContext(s.ctx, "no action taken for labels", "labels", event.WorkflowJob.Labels)
+			s.logger.InfoContext(ctx, "no action taken for labels", "labels", event.WorkflowJob.Labels)
 			resp.WriteHeader(http.StatusNoContent)
 			return
 		}
 
-		installation, err := s.appClient.InstallationForID(s.ctx, strconv.FormatInt(*event.Installation.ID, 10))
+		installation, err := s.appClient.InstallationForID(ctx, strconv.FormatInt(*event.Installation.ID, 10))
 		if err != nil {
-			s.logger.ErrorContext(s.ctx, "failed to setup installation client", "error", err)
+			s.logger.ErrorContext(ctx, "failed to setup installation client", "error", err)
 			fmt.Fprint(resp, html.EscapeString("failed to setup installation client"))
 			resp.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		httpClient := oauth2.NewClient(s.ctx, (*installation).AllReposOAuth2TokenSource(s.ctx, map[string]string{
+		httpClient := oauth2.NewClient(ctx, (*installation).AllReposOAuth2TokenSource(ctx, map[string]string{
 			"administration": "write",
 		}))
 		gh := github.NewClient(httpClient)
@@ -219,9 +220,9 @@ func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
 
 		// Note that even though event.WorkflowJob.RunID is used for a dynamic string, it's not
 		// guaranteed that particular job will run on this specific runner.
-		jitconfig, _, err := gh.Actions.GenerateRepoJITConfig(s.ctx, *event.Org.Login, *event.Repo.Name, &github.GenerateJITConfigRequest{Name: fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID), RunnerGroupID: 1, Labels: []string{"self-hosted", "Linux", "X64"}})
+		jitconfig, _, err := gh.Actions.GenerateRepoJITConfig(ctx, *event.Org.Login, *event.Repo.Name, &github.GenerateJITConfigRequest{Name: fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID), RunnerGroupID: 1, Labels: []string{"self-hosted", "Linux", "X64"}})
 		if err != nil {
-			s.logger.ErrorContext(s.ctx, "failed to generate jitconfig", "error", err)
+			s.logger.ErrorContext(ctx, "failed to generate jitconfig", "error", err)
 			fmt.Fprint(resp, html.EscapeString("failed to generate jitconfig"))
 			resp.WriteHeader(http.StatusInternalServerError)
 			return
@@ -242,15 +243,15 @@ func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
 			},
 		}
 
-		_, err = s.cloudBuildClient.RunBuildTrigger(s.ctx, buildReq)
+		_, err = s.cloudBuildClient.RunBuildTrigger(ctx, buildReq)
 		if err != nil {
-			s.logger.ErrorContext(s.ctx, "failed to run build", "error", err)
+			s.logger.ErrorContext(ctx, "failed to run build", "error", err)
 			fmt.Fprint(resp, html.EscapeString("failed to run build"))
 			resp.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		s.logger.InfoContext(s.ctx, "started runner", "runner_id", fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID))
+		s.logger.InfoContext(ctx, "started runner", "runner_id", fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID))
 		resp.WriteHeader(http.StatusNoContent)
 	}
 }

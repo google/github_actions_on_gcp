@@ -40,17 +40,17 @@ import (
 )
 
 const (
-	SHA256SignatureHeader     = "X-Hub-Signature-256"
-	EventTypeHeader           = "X-Github-Event"
-	DeliveryIDHeader          = "X-Github-Delivery"
-	ContentTypeHeader         = "Content-Type"
+	SHA256SignatureHeader = "X-Hub-Signature-256"
+	EventTypeHeader       = "X-Github-Event"
+	DeliveryIDHeader      = "X-Github-Delivery"
+	ContentTypeHeader     = "Content-Type"
+	//nolint:gosec // this is a test value
 	serverGitHubWebhookSecret = "test-github-webhook-secret"
 )
 
 func TestHandleWebhook(t *testing.T) {
 	t.Parallel()
 
-	ctx := t.Context()
 	cases := []struct {
 		name                 string
 		payloadType          string
@@ -78,14 +78,14 @@ func TestHandleWebhook(t *testing.T) {
 
 			orgLogin := "google"
 			repoName := "webhook"
-			installationId := int64(123)
+			installationID := int64(123)
 			event := &github.WorkflowJobEvent{
 				Action: &tc.action,
 				WorkflowJob: &github.WorkflowJob{
 					Labels: []string{"self-hosted"},
 				},
 				Installation: &github.Installation{
-					ID: &installationId,
+					ID: &installationID,
 				},
 				Org: &github.Organization{
 					Login: &orgLogin,
@@ -159,7 +159,6 @@ func TestHandleWebhook(t *testing.T) {
 
 			srv := &Server{
 				logger:           logger,
-				ctx:              ctx,
 				webhookSecret:    []byte(tc.payloadWebhookSecret),
 				appClient:        app,
 				cloudBuildClient: cloudBuildClientStub,
