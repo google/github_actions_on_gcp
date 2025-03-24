@@ -9,3 +9,14 @@ $ curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/insta
 go install mvdan.cc/gofumpt@latest
 go install github.com/daixiang0/gci@latest
 ```
+
+## Deploy Prototype
+
+```shell
+gcloud run deploy webhook-go \
+    --region=us-west1 \
+    --source . \
+    --update-secrets=${WEBHOOK_KEY_PATH}=${KEY_NAME}:latest \
+    --allow-unauthenticated \
+    --set-env-vars=APP_ID=${APP_ID},TRIGGER_ID=${TRIGGER_ID},PROJECT_ID=${PROJECT_ID},KEY_ID=${KEY_ID},TRIGGER_NAME=${TRIGGER_NAME},LOCATION=${LOCATION},WEBHOOK_KEY_PATH=${WEBHOOK_KEY_PATH}
+```

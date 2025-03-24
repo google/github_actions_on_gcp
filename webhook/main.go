@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook
+package main
 
 import (
 	"context"
@@ -40,21 +40,18 @@ import (
 	"github.com/googleapis/gax-go/v2"
 )
 
-// gcloud run deploy webhook-go --region=us-west1 --source . --update-secrets=${WEBHOOK_KEY_PATH}=${KEY_NAME}:latest --allow-unauthenticated --set-env-vars=APP_ID=${APP_ID},TRIGGER_ID=${TRIGGER_ID},PROJECT_ID=${PROJECT_ID},KEY_ID=${KEY_ID},TRIGGER_NAME=${TRIGGER_NAME},LOCATION=${LOCATION},WEBHOOK_KEY_PATH=${WEBHOOK_KEY_PATH}
-
-type Server struct {
+type server struct {
 	logger           *slog.Logger
 	webhookSecret    []byte
 	appClient        *githubauth.App
-	cloudBuildClient CloudBuildClient
+	cloudBuildClient cloudBuildClient
 	baseURL          *url.URL
 }
 
-type CloudBuildClient interface {
+type cloudBuildClient interface {
 	RunBuildTrigger(ctx context.Context, req *cloudbuildpb.RunBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuild.RunBuildTriggerOperation, error)
 }
 
-//nolint:unused // main is the entry point of the program and is called by Cloud Run.
 func main() {
 	ctx, done := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer done()
@@ -69,7 +66,6 @@ func main() {
 	}
 }
 
-//nolint:unused
 func realMain(ctx context.Context, logger *slog.Logger) error {
 	webhookSecret, err := getWebhookSecret(ctx, logger)
 	if err != nil {
@@ -96,7 +92,7 @@ func realMain(ctx context.Context, logger *slog.Logger) error {
 		return err
 	}
 
-	server := &Server{
+	server := &server{
 		logger:           logger,
 		webhookSecret:    webhookSecret,
 		appClient:        appClient,
@@ -170,7 +166,7 @@ func getCloudBuildClient(ctx context.Context, logger *slog.Logger) (*cloudbuild.
 	return client, nil
 }
 
-func (s *Server) handler(resp http.ResponseWriter, req *http.Request) {
+func (s *server) handler(resp http.ResponseWriter, req *http.Request) {
 	ctx := logging.WithLogger(req.Context(), s.logger)
 	payload, err := github.ValidatePayload(req, s.webhookSecret)
 	if err != nil {

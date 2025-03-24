@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook
+package main
 
 import (
 	"bytes"
@@ -157,7 +157,7 @@ func TestHandleWebhook(t *testing.T) {
 				runBuildTriggerRet: &cloudbuild.RunBuildTriggerOperation{},
 			}
 
-			srv := &Server{
+			srv := &server{
 				logger:           logger,
 				webhookSecret:    []byte(tc.payloadWebhookSecret),
 				appClient:        app,
