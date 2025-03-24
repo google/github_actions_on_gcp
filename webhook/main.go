@@ -46,6 +46,10 @@ type server struct {
 	appClient        *githubauth.App
 	cloudBuildClient cloudBuildClient
 	baseURL          *url.URL
+	projectID        string
+	location         string
+	triggerName      string
+	triggerID        string
 }
 
 type cloudBuildClient interface {
@@ -67,38 +71,10 @@ func main() {
 }
 
 func realMain(ctx context.Context, logger *slog.Logger) error {
-	webhookSecret, err := getWebhookSecret(ctx, logger)
+	server, err := newServer(ctx, logger)
 	if err != nil {
 		return err
 	}
-
-	kmsClient, err := getKeyManagementClient(ctx, logger)
-	if err != nil {
-		return err
-	}
-
-	signer, err := getSigner(ctx, logger, kmsClient)
-	if err != nil {
-		return err
-	}
-
-	appClient, err := getAppClient(ctx, logger, signer)
-	if err != nil {
-		return err
-	}
-
-	cloudBuildClient, err := getCloudBuildClient(ctx, logger)
-	if err != nil {
-		return err
-	}
-
-	server := &server{
-		logger:           logger,
-		webhookSecret:    webhookSecret,
-		appClient:        appClient,
-		cloudBuildClient: cloudBuildClient,
-	}
-
 	logger.InfoContext(ctx, "starting server")
 	http.HandleFunc("/", server.handler)
 	port := os.Getenv("PORT")
@@ -118,52 +94,50 @@ func realMain(ctx context.Context, logger *slog.Logger) error {
 	return nil
 }
 
-func getWebhookSecret(ctx context.Context, logger *slog.Logger) ([]byte, error) {
+func newServer(ctx context.Context, logger *slog.Logger) (*server, error) {
 	webhookKeyPath := os.Getenv("WEBHOOK_KEY_PATH")
 	webhookSecret, err := os.ReadFile(webhookKeyPath)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to read webhook secret", "error", err)
 		return nil, fmt.Errorf("failed to read webhook secret: %w", err)
 	}
-	return webhookSecret, nil
-}
 
-func getKeyManagementClient(ctx context.Context, logger *slog.Logger) (*kms.KeyManagementClient, error) {
 	kmsClient, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create kms client", "error", err)
 		return nil, fmt.Errorf("failed to create kms client: %w", err)
 	}
-	return kmsClient, nil
-}
 
-func getSigner(ctx context.Context, logger *slog.Logger, kmsClient *kms.KeyManagementClient) (*gcpkms.Signer, error) {
 	keyID := os.Getenv("KEY_ID")
 	signer, err := gcpkms.NewSigner(ctx, kmsClient, keyID)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create app signer", "error", err)
 		return nil, fmt.Errorf("failed to create app signer: %w", err)
 	}
-	return signer, nil
-}
 
-func getAppClient(ctx context.Context, logger *slog.Logger, signer *gcpkms.Signer) (*githubauth.App, error) {
 	appID := os.Getenv("APP_ID")
-	app, err := githubauth.NewApp(appID, signer)
+	appClient, err := githubauth.NewApp(appID, signer)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to setup app client", "error", err)
 		return nil, fmt.Errorf("failed to setup app client: %w", err)
 	}
-	return app, nil
-}
 
-func getCloudBuildClient(ctx context.Context, logger *slog.Logger) (*cloudbuild.Client, error) {
-	client, err := cloudbuild.NewClient(ctx)
+	cloudBuildClient, err := cloudbuild.NewClient(ctx)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create cloudbuild client", "error", err)
 		return nil, fmt.Errorf("failed to create cloudbuild client: %w", err)
 	}
-	return client, nil
+
+	return &server{
+		logger:           logger,
+		webhookSecret:    webhookSecret,
+		appClient:        appClient,
+		cloudBuildClient: cloudBuildClient,
+		projectID:        os.Getenv("PROJECT_ID"),
+		location:         os.Getenv("LOCATION"),
+		triggerName:      os.Getenv("TRIGGER_NAME"),
+		triggerID:        os.Getenv("TRIGGER_ID"),
+	}, nil
 }
 
 func (s *server) handler(resp http.ResponseWriter, req *http.Request) {
@@ -224,14 +198,10 @@ func (s *server) handler(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		projectID := os.Getenv("PROJECT_ID")
-		location := os.Getenv("LOCATION")
-		triggerName := os.Getenv("TRIGGER_NAME")
-		triggerID := os.Getenv("TRIGGER_ID")
 		buildReq := &cloudbuildpb.RunBuildTriggerRequest{
-			Name:      fmt.Sprintf("projects/%s/locations/%s/triggers/%s", projectID, location, triggerName),
-			ProjectId: projectID,
-			TriggerId: triggerID,
+			Name:      fmt.Sprintf("projects/%s/locations/%s/triggers/%s", s.projectID, s.location, s.triggerName),
+			ProjectId: s.projectID,
+			TriggerId: s.triggerID,
 			Source: &cloudbuildpb.RepoSource{
 				Substitutions: map[string]string{
 					"_ENCODED_JIT_CONFIG": *jitconfig.EncodedJITConfig,
