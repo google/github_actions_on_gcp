@@ -48,12 +48,10 @@ type server struct {
 	baseURL          *url.URL
 	projectID        string
 	location         string
-	triggerName      string
-	triggerID        string
 }
 
 type cloudBuildClient interface {
-	RunBuildTrigger(ctx context.Context, req *cloudbuildpb.RunBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuild.RunBuildTriggerOperation, error)
+	CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBuildRequest, opts ...gax.CallOption) (*cloudbuild.CreateBuildOperation, error)
 }
 
 func main() {
@@ -133,10 +131,8 @@ func newServer(ctx context.Context, logger *slog.Logger) (*server, error) {
 		webhookSecret:    webhookSecret,
 		appClient:        appClient,
 		cloudBuildClient: cloudBuildClient,
-		projectID:        os.Getenv("BUILD_TRIGGER_PROJECT_ID"),
-		location:         os.Getenv("BUILD_TRIGGER_LOCATION"),
-		triggerName:      os.Getenv("BUILD_TRIGGER_NAME"),
-		triggerID:        os.Getenv("BUILD_TRIGGER_ID"),
+		projectID:        os.Getenv("PROJECT_ID"),
+		location:         os.Getenv("BUILD_LOCATION"),
 	}, nil
 }
 
@@ -198,18 +194,35 @@ func (s *server) handler(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		buildReq := &cloudbuildpb.RunBuildTriggerRequest{
-			Name:      fmt.Sprintf("projects/%s/locations/%s/triggers/%s", s.projectID, s.location, s.triggerName),
-			ProjectId: s.projectID,
-			TriggerId: s.triggerID,
-			Source: &cloudbuildpb.RepoSource{
-				Substitutions: map[string]string{
-					"_ENCODED_JIT_CONFIG": *jitconfig.EncodedJITConfig,
+		build := &cloudbuildpb.Build{
+			Steps: []*cloudbuildpb.BuildStep{
+				{
+					Id:         "run",
+					Name:       "gcr.io/cloud-builders/docker",
+					Entrypoint: "bash",
+					// privileged and security-opts are needed to run Docker-in-Docker
+					// https://rootlesscontaine.rs/getting-started/common/apparmor/
+					Args: []string{
+						"-c",
+						fmt.Sprintf("docker run --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -eENCODED_JIT_CONFIG=$_ENCODED_JIT_CONFIG $LOCATION-docker.pkg.dev/%s/$_CONTAINER_REPOSITORY/github-actions-runner:latest", s.projectID),
+					},
 				},
+			},
+			Options: &cloudbuildpb.BuildOptions{
+				Logging: cloudbuildpb.BuildOptions_CLOUD_LOGGING_ONLY,
+			},
+			Substitutions: map[string]string{
+				"_ENCODED_JIT_CONFIG": *jitconfig.EncodedJITConfig,
 			},
 		}
 
-		_, err = s.cloudBuildClient.RunBuildTrigger(ctx, buildReq)
+		buildReq := &cloudbuildpb.CreateBuildRequest{
+			Parent:    fmt.Sprintf("projects/%s/locations/%s", s.projectID, s.location),
+			ProjectId: s.projectID,
+			Build:     build,
+		}
+
+		_, err = s.cloudBuildClient.CreateBuild(ctx, buildReq)
 		if err != nil {
 			s.logger.ErrorContext(ctx, "failed to run build", "error", err)
 			fmt.Fprint(resp, html.EscapeString("failed to run build"))
