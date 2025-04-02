@@ -18,5 +18,5 @@ gcloud run deploy webhook-go \
     --source . \
     --update-secrets=${WEBHOOK_KEY_PATH}=${KEY_NAME}:latest \
     --allow-unauthenticated \
-    --set-env-vars=APP_ID=${APP_ID},TRIGGER_ID=${TRIGGER_ID},PROJECT_ID=${PROJECT_ID},KEY_ID=${KEY_ID},TRIGGER_NAME=${TRIGGER_NAME},LOCATION=${LOCATION},WEBHOOK_KEY_PATH=${WEBHOOK_KEY_PATH}
+    --set-env-vars=APP_ID=${APP_ID},PROJECT_ID=${PROJECT_ID},KEY_ID=${KEY_ID},LOCATION=${LOCATION},WEBHOOK_KEY_PATH=${WEBHOOK_KEY_PATH}
 ```
