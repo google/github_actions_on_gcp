@@ -22,13 +22,3 @@ terraform {
     }
   }
 }
-
-# FIXME(pberruti): Decipher this and see if it needs addressing
-# Warning: Available Write-only Attribute Alternative
-# │
-# │   with module.cloud_run.google_secret_manager_secret_version.secrets_default_version,
-# │   on .terraform/modules/cloud_run/modules/cloud_run/main.tf line 265, in resource "google_secret_manager_secret_version" "secrets_default_version":
-# │  265:   secret_data = "DEFAULT_VALUE"
-# │
-# │ The attribute secret_data has a write-only alternative secret_data_wo available. Use the write-only
-# │ alternative of the attribute when possible.

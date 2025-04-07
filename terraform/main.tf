@@ -67,19 +67,7 @@ module "cloud_run" {
 
   envvars = var.envvars
 
-  secret_envvars = {
-    # FIXME(pberruti): Does this really have to be a secret instead of a regular ENV var?
-    "APP_ID" : {
-      name : "github-application-id",
-      version : "latest",
-    },
-    # FIXME(pberruti): There's probably a better way to do this with a Terraform definition for a KMS key - it also might not be sensitive enough to require a secret?
-    "KEY_ID" : {
-      name : "github-app-private-key-id",
-      version : "latest",
-    }
-    # FIXME(pberruti): What about a mounted Secret Manager key?
-  }
+  secret_envvars = {}
 }
 
 # allow the ci service account to act as the cloud run service account
