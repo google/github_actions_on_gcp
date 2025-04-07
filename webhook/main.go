@@ -95,7 +95,7 @@ func realMain(ctx context.Context, logger *slog.Logger) error {
 }
 
 func newServer(ctx context.Context, logger *slog.Logger) (*server, error) {
-	webhookKeyPath := os.Getenv("WEBHOOK_KEY_PATH")
+	webhookKeyPath := os.Getenv("WEBHOOK_KEY_MOUNT_PATH")
 	webhookSecret, err := os.ReadFile(webhookKeyPath)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to read webhook secret", "error", err)
@@ -108,14 +108,14 @@ func newServer(ctx context.Context, logger *slog.Logger) (*server, error) {
 		return nil, fmt.Errorf("failed to create kms client: %w", err)
 	}
 
-	keyID := os.Getenv("KEY_ID")
+	keyID := os.Getenv("KMS_APP_PRIVATE_KEY_ID")
 	signer, err := gcpkms.NewSigner(ctx, kmsClient, keyID)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create app signer", "error", err)
 		return nil, fmt.Errorf("failed to create app signer: %w", err)
 	}
 
-	appID := os.Getenv("APP_ID")
+	appID := os.Getenv("GITHUB_APP_ID")
 	appClient, err := githubauth.NewApp(appID, signer)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to setup app client", "error", err)
@@ -133,10 +133,10 @@ func newServer(ctx context.Context, logger *slog.Logger) (*server, error) {
 		webhookSecret:    webhookSecret,
 		appClient:        appClient,
 		cloudBuildClient: cloudBuildClient,
-		projectID:        os.Getenv("PROJECT_ID"),
-		location:         os.Getenv("LOCATION"),
-		triggerName:      os.Getenv("TRIGGER_NAME"),
-		triggerID:        os.Getenv("TRIGGER_ID"),
+		projectID:        os.Getenv("BUILD_TRIGGER_PROJECT_ID"),
+		location:         os.Getenv("BUILD_TRIGGER_LOCATION"),
+		triggerName:      os.Getenv("BUILD_TRIGGER_NAME"),
+		triggerID:        os.Getenv("BUILD_TRIGGER_ID"),
 	}, nil
 }
 
