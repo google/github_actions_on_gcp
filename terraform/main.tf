@@ -57,7 +57,7 @@ module "cloud_run" {
   image                 = var.image
   ingress               = var.enable_gclb ? "internal-and-cloud-load-balancing" : "all"
   min_instances         = 1
-  secrets               = ["github-application-id", "github-app-private-key-id"]
+  secrets               = ["webhook-secret-file"]
   service_account_email = google_service_account.run_service_account.email
   service_iam = {
     admins     = var.service_iam.admins
@@ -68,6 +68,13 @@ module "cloud_run" {
   envvars = var.envvars
 
   secret_envvars = {}
+
+  secret_volumes = {
+    "${var.envvars["WEBHOOK_KEY_MOUNT_PATH"]}" : {
+      name : "webhook-secret-file",
+      version : "latest",
+    }
+  }
 }
 
 # allow the ci service account to act as the cloud run service account

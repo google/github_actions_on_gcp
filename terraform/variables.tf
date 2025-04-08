@@ -98,13 +98,13 @@ variable "alerts" {
 variable "envvars" {
   type = map(string)
   default = {
-    GITHUB_APP_ID            = ""
-    KMS_APP_PRIVATE_KEY_ID   = ""
-    BUILD_TRIGGER_LOCATION   = ""
-    BUILD_TRIGGER_PROJECT_ID = ""
-    BUILD_TRIGGER_ID         = ""
-    BUILD_TRIGGER_NAME       = ""
-    WEBHOOK_KEY_MOUNT_PATH   = "/etc/secrets/webhook/key"
+    # GITHUB_APP_ID            = ""
+    # KMS_APP_PRIVATE_KEY_ID   = ""
+    # BUILD_TRIGGER_LOCATION   = ""
+    # BUILD_TRIGGER_PROJECT_ID = ""
+    # BUILD_TRIGGER_ID         = ""
+    # BUILD_TRIGGER_NAME       = ""
+    # WEBHOOK_KEY_MOUNT_PATH   = "/etc/secrets/webhook/key"
   }
   description = "Environment variables for the Cloud Run service (plain text)."
 }
