@@ -20,6 +20,7 @@ resource "google_project_service" "default" {
     "iamcredentials.googleapis.com",
     "serviceusage.googleapis.com",
     "sts.googleapis.com",
+    "secretmanager.googleapis.com",
   ])
 
   project = var.project_id
