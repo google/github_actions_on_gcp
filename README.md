@@ -16,7 +16,7 @@ go install github.com/daixiang0/gci@latest
 gcloud run deploy webhook-go \
     --region=us-west1 \
     --source . \
-    --update-secrets=${WEBHOOK_KEY_PATH}=${KEY_NAME}:latest \
+    --update-secrets=${WEBHOOK_KEY_MOUNT_PATH}=${KEY_NAME}:latest \
     --allow-unauthenticated \
-    --set-env-vars=APP_ID=${APP_ID},TRIGGER_ID=${TRIGGER_ID},PROJECT_ID=${PROJECT_ID},KEY_ID=${KEY_ID},TRIGGER_NAME=${TRIGGER_NAME},LOCATION=${LOCATION},WEBHOOK_KEY_PATH=${WEBHOOK_KEY_PATH}
+    --set-env-vars=APP_ID=${APP_ID},PROJECT_ID=${PROJECT_ID},KMS_APP_PRIVATE_KEY_ID=${KMS_APP_PRIVATE_KEY_ID},BUILD_LOCATION=${BUILD_LOCATION},WEBHOOK_KEY_MOUNT_PATH=${WEBHOOK_KEY_MOUNT_PATH}
 ```

@@ -154,7 +154,7 @@ func TestHandleWebhook(t *testing.T) {
 			}
 
 			cloudBuildClientStub := &CloudBuildClientStub{
-				runBuildTriggerRet: &cloudbuild.RunBuildTriggerOperation{},
+				createBuildRet: &cloudbuild.CreateBuildOperation{},
 			}
 
 			srv := &server{
@@ -185,13 +185,13 @@ func createSignature(key, payload []byte) string {
 }
 
 type CloudBuildClientStub struct {
-	runBuildTriggerRet *cloudbuild.RunBuildTriggerOperation
-	runBuildTriggerErr error
+	createBuildRet *cloudbuild.CreateBuildOperation
+	createBuildErr error
 }
 
-func (c *CloudBuildClientStub) RunBuildTrigger(ctx context.Context, req *cloudbuildpb.RunBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuild.RunBuildTriggerOperation, error) {
-	if c.runBuildTriggerErr != nil {
-		return nil, c.runBuildTriggerErr
+func (c *CloudBuildClientStub) CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBuildRequest, opts ...gax.CallOption) (*cloudbuild.CreateBuildOperation, error) {
+	if c.createBuildErr != nil {
+		return nil, c.createBuildErr
 	}
-	return c.runBuildTriggerRet, nil
+	return c.createBuildRet, nil
 }
