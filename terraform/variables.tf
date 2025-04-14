@@ -106,3 +106,21 @@ variable "envvars" {
   }
   description = "Environment variables for the Cloud Run service (plain text)."
 }
+
+variable "kms_keyring_name" {
+  description = "Keyring name."
+  type        = string
+  default     = "webhook-keyring"
+}
+
+variable "kms_key_location" {
+  description = "The location where kms key will be created."
+  type        = string
+  default     = "global"
+}
+
+variable "kms_key_name" {
+  description = "Name of the key containing the GitHub App secret key."
+  type        = string
+  default     = "webhook-github-app-secret-key"
+}

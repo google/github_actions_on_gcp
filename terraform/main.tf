@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+resource "random_id" "default" {
+  byte_length = 2
+}
+
 resource "google_project_service" "default" {
   for_each = toset([
+    "cloudkms.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "logging.googleapis.com",
     "iam.googleapis.com",
@@ -35,6 +40,32 @@ resource "google_service_account" "run_service_account" {
 
   account_id   = "${var.name}-sa"
   display_name = "${var.name}-sa Cloud Run Service Account"
+}
+
+resource "google_kms_key_ring" "webhook_keyring" {
+
+  project = var.project_id
+
+  name     = "${var.kms_keyring_name}-${random_id.default.hex}"
+  location = var.kms_key_location
+}
+
+resource "google_kms_crypto_key" "webhook_app_private_key" {
+  name     = "${var.kms_key_name}-${random_id.default.hex}"
+  key_ring = google_kms_key_ring.webhook_keyring.id
+  purpose  = "ASYMMETRIC_SIGN"
+
+  # There's no guarantee that the underlying crypto key version is actually created,
+  # instead manually create the version
+  skip_initial_version_creation = "true"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "google_kms_crypto_key_version" "app_private_key_version" {
+  crypto_key = google_kms_crypto_key.webhook_app_private_key.id
 }
 
 module "gclb" {
@@ -66,7 +97,12 @@ module "cloud_run" {
     invokers   = toset(var.service_iam.invokers)
   }
 
-  envvars = var.envvars
+  envvars = merge(
+    var.envvars,
+    {
+      "KMS_APP_PRIVATE_KEY_ID" : google_kms_crypto_key_version.app_private_key_version.id
+    }
+  )
 
   secret_envvars = {}
 
