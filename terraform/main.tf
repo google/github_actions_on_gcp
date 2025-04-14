@@ -91,6 +91,7 @@ module "cloud_run" {
   min_instances         = 1
   secrets               = ["webhook-secret-file"]
   service_account_email = google_service_account.run_service_account.email
+  args                  = ["webhook", "server"]
   service_iam = {
     admins     = var.service_iam.admins
     developers = toset(concat(var.service_iam.developers, [var.ci_service_account_member]))

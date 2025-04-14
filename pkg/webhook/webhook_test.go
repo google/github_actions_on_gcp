@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package webhook
 
 import (
 	"bytes"
-	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
@@ -31,12 +30,9 @@ import (
 	"testing"
 
 	cloudbuild "cloud.google.com/go/cloudbuild/apiv1/v2"
-	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 	"github.com/abcxyz/pkg/githubauth"
-	"github.com/abcxyz/pkg/logging"
 
 	"github.com/google/go-github/v69/github"
-	"github.com/googleapis/gax-go/v2"
 )
 
 const (
@@ -66,15 +62,14 @@ func TestHandleWebhook(t *testing.T) {
 			action:               "queued",
 			payloadWebhookSecret: serverGitHubWebhookSecret,
 			contentType:          "application/json",
-			expStatusCode:        204,
-			expRespBody:          "",
+			expStatusCode:        200,
+			expRespBody:          runnerStartedMsg,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			logger := logging.TestLogger(t)
 
 			orgLogin := "google"
 			repoName := "webhook"
@@ -153,18 +148,17 @@ func TestHandleWebhook(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			cloudBuildClientStub := &CloudBuildClientStub{
+			mockCloudBuildClient := &MockCloudBuildClient{
 				createBuildRet: &cloudbuild.CreateBuildOperation{},
 			}
 
-			srv := &server{
-				logger:           logger,
-				webhookSecret:    []byte(tc.payloadWebhookSecret),
-				appClient:        app,
-				cloudBuildClient: cloudBuildClientStub,
-				baseURL:          baseURL,
+			srv := &Server{
+				webhookSecret: []byte(tc.payloadWebhookSecret),
+				appClient:     app,
+				cbc:           mockCloudBuildClient,
+				baseURL:       baseURL,
 			}
-			srv.handler(resp, req)
+			srv.handleWebhook().ServeHTTP(resp, req)
 
 			if got, want := resp.Code, tc.expStatusCode; got != want {
 				t.Errorf("expected %d to be %d", got, want)
@@ -182,16 +176,4 @@ func createSignature(key, payload []byte) string {
 	mac := hmac.New(sha256.New, key)
 	mac.Write(payload)
 	return hex.EncodeToString(mac.Sum(nil))
-}
-
-type CloudBuildClientStub struct {
-	createBuildRet *cloudbuild.CreateBuildOperation
-	createBuildErr error
-}
-
-func (c *CloudBuildClientStub) CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBuildRequest, opts ...gax.CallOption) (*cloudbuild.CreateBuildOperation, error) {
-	if c.createBuildErr != nil {
-		return nil, c.createBuildErr
-	}
-	return c.createBuildRet, nil
 }
