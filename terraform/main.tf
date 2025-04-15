@@ -48,6 +48,10 @@ resource "google_kms_key_ring" "webhook_keyring" {
 
   name     = "${var.kms_keyring_name}-${random_id.default.hex}"
   location = var.kms_key_location
+
+  depends_on = [
+    google_project_service.default["cloudkms.googleapis.com"],
+  ]
 }
 
 resource "google_kms_crypto_key" "webhook_app_private_key" {
@@ -59,6 +63,10 @@ resource "google_kms_crypto_key" "webhook_app_private_key" {
   # instead manually create the version
   skip_initial_version_creation = "true"
 
+  depends_on = [
+    google_project_service.default["cloudkms.googleapis.com"],
+  ]
+
   lifecycle {
     prevent_destroy = true
   }
@@ -66,6 +74,10 @@ resource "google_kms_crypto_key" "webhook_app_private_key" {
 
 resource "google_kms_crypto_key_version" "app_private_key_version" {
   crypto_key = google_kms_crypto_key.webhook_app_private_key.id
+
+  depends_on = [
+    google_project_service.default["cloudkms.googleapis.com"],
+  ]
 }
 
 module "gclb" {
