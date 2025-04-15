@@ -17,12 +17,12 @@ jobs:
   go_lint:
     uses: 'abcxyz/pkg/.github/workflows/go-lint.yml@main' # ratchet:exclude
     with:
-      directory: 'webhook/'
+      directory: 'pkg/'
 
   go_test:
     uses: 'abcxyz/pkg/.github/workflows/go-test.yml@main' # ratchet:exclude
     with:
-      directory: 'webhook/'
+      directory: 'pkg/'
 
   yaml_lint:
     uses: 'abcxyz/pkg/.github/workflows/yaml-lint.yml@main' # ratchet:exclude
