@@ -27,11 +27,14 @@ import (
 // for running the webhook service.
 type Config struct {
 	BuildLocation             string `env:"BUILD_LOCATION,required"`
+	GitHubAPIBaseURL          string `env:"GITHUB_API_BASE_URL,default=https://api.github.com"`
 	GitHubAppID               string `env:"GITHUB_APP_ID,required"`
 	GitHubWebhookKeyMountPath string `env:"WEBHOOK_KEY_MOUNT_PATH,required"`
 	KMSAppPrivateKeyID        string `env:"KMS_APP_PRIVATE_KEY_ID,required"`
 	ProjectID                 string `env:"PROJECT_ID,required"`
 	Port                      string `env:"PORT,default=8080"`
+	RunnerImageName           string `env:"RUNNER_IMAGE_NAME,default=default-runner"`
+	RunnerRespositoryID       string `env:"RUNNER_REPOSITORY_ID,required"`
 }
 
 // Validate validates the webhook config after load.
@@ -54,6 +57,10 @@ func (cfg *Config) Validate() error {
 
 	if cfg.ProjectID == "" {
 		return fmt.Errorf("PROJECT_ID is required")
+	}
+
+	if cfg.RunnerRespositoryID == "" {
+		return fmt.Errorf("RUNNER_REPOSITORY_ID is required")
 	}
 
 	return nil
@@ -81,6 +88,14 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 		Target: &cfg.BuildLocation,
 		EnvVar: "BUILD_LOCATION",
 		Usage:  `The location used for the cloud build build.`,
+	})
+
+	f.StringVar(&cli.StringVar{
+		Name:    "github-api-base-url",
+		Target:  &cfg.GitHubAPIBaseURL,
+		EnvVar:  "GITHUB_API_BASE_URL",
+		Default: "https://api.github.com",
+		Usage:   `The GitHub API URL.`,
 	})
 
 	f.StringVar(&cli.StringVar{
@@ -117,6 +132,21 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 		Target: &cfg.GitHubWebhookKeyMountPath,
 		EnvVar: "WEBHOOK_KEY_MOUNT_PATH",
 		Usage:  `GitHub webhook key mount path.`,
+	})
+
+	f.StringVar(&cli.StringVar{
+		Name:    "runner-image-name",
+		Target:  &cfg.RunnerImageName,
+		EnvVar:  "RUNNER_IMAGE_NAME",
+		Default: "default-runner",
+		Usage:   `The runner image name.`,
+	})
+
+	f.StringVar(&cli.StringVar{
+		Name:   "runner-repository-id",
+		Target: &cfg.RunnerRespositoryID,
+		EnvVar: "RUNNER_REPOSITORY_ID",
+		Usage:  `The GAR repository that holds the runner image`,
 	})
 
 	return set

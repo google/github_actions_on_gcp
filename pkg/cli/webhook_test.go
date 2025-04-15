@@ -87,6 +87,17 @@ func TestWebhookServerCommand(t *testing.T) {
 			expErr: `PROJECT_ID is required`,
 		},
 		{
+			name: "invalid_runner_repository_id",
+			env: map[string]string{
+				"BUILD_LOCATION":         "build-location",
+				"GITHUB_APP_ID":          "github-app-id",
+				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
+				"KMS_APP_PRIVATE_KEY_ID": "kms-app-private-key-id",
+				"PROJECT_ID":             "project-id",
+			},
+			expErr: `RUNNER_REPOSITORY_ID is required`,
+		},
+		{
 			name: "happy_path",
 			env: map[string]string{
 				"BUILD_LOCATION":         "build-location",
@@ -94,6 +105,7 @@ func TestWebhookServerCommand(t *testing.T) {
 				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
 				"KMS_APP_PRIVATE_KEY_ID": "kms-app-private-key-id",
 				"PROJECT_ID":             "project-id",
+				"RUNNER_REPOSITORY_ID":   "runner-repo-id",
 			},
 			fileMock: &webhook.MockFileReader{
 				ReadFileMock: &webhook.ReadFileResErr{

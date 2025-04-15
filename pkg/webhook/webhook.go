@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 
@@ -29,8 +30,8 @@ import (
 )
 
 var (
-	tagName          = "self-hosted"
-	runnerStartedMsg = "runner started"
+	defaultRunnerLabel = "self-hosted"
+	runnerStartedMsg   = "runner started"
 )
 
 // apiResponse is a structure that contains a http status code,
@@ -80,7 +81,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			return &apiResponse{http.StatusNoContent, fmt.Sprintf("no action taken for action type: %q", *event.Action), nil}
 		}
 
-		if !slices.Contains(event.WorkflowJob.Labels, tagName) {
+		if !slices.Contains(event.WorkflowJob.Labels, defaultRunnerLabel) {
 			logger.InfoContext(ctx, "no action taken for labels", "labels", event.WorkflowJob.Labels)
 			return &apiResponse{http.StatusNoContent, fmt.Sprintf("no action taken for labels: %s", event.WorkflowJob.Labels), nil}
 		}
@@ -93,14 +94,22 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 		httpClient := oauth2.NewClient(ctx, (*installation).AllReposOAuth2TokenSource(ctx, map[string]string{
 			"administration": "write",
 		}))
+
 		gh := github.NewClient(httpClient)
-		if s.baseURL != nil {
-			gh.BaseURL = s.baseURL
+		baseURL, err := url.Parse(fmt.Sprintf("%s/", s.ghAPIBaseURL))
+		if err != nil {
+			return &apiResponse{http.StatusInternalServerError, "failed to set github base URL", err}
 		}
+		gh.BaseURL = baseURL
+		gh.UploadURL = baseURL
 
 		// Note that even though event.WorkflowJob.RunID is used for a dynamic string, it's not
 		// guaranteed that particular job will run on this specific runner.
-		jitconfig, _, err := gh.Actions.GenerateRepoJITConfig(ctx, *event.Org.Login, *event.Repo.Name, &github.GenerateJITConfigRequest{Name: fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID), RunnerGroupID: 1, Labels: []string{"self-hosted", "Linux", "X64"}})
+		jitconfig, _, err := gh.Actions.GenerateRepoJITConfig(ctx, *event.Org.Login, *event.Repo.Name, &github.GenerateJITConfigRequest{
+			Name:          fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID),
+			RunnerGroupID: 1,
+			Labels:        []string{defaultRunnerLabel, "Linux", "X64"},
+		})
 		if err != nil {
 			return &apiResponse{http.StatusInternalServerError, "failed to generate jitconfig", err}
 		}
@@ -108,14 +117,10 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 		build := &cloudbuildpb.Build{
 			Steps: []*cloudbuildpb.BuildStep{
 				{
-					Id:         "run",
-					Name:       "gcr.io/cloud-builders/docker",
-					Entrypoint: "bash",
-					// privileged and security-opts are needed to run Docker-in-Docker
-					// https://rootlesscontaine.rs/getting-started/common/apparmor/
-					Args: []string{
-						"-c",
-						fmt.Sprintf("docker run --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -eENCODED_JIT_CONFIG=$_ENCODED_JIT_CONFIG %s-docker.pkg.dev/%s/$_CONTAINER_REPOSITORY/github-actions-runner:latest", s.buildLocation, s.projectID),
+					Id:   "run",
+					Name: "$_REPOSITORY_ID/$_IMAGE_NAME:gcloud-c940d",
+					Env: []string{
+						"ENCODED_JIT_CONFIG=${_ENCODED_JIT_CONFIG}",
 					},
 				},
 			},
@@ -124,6 +129,8 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			},
 			Substitutions: map[string]string{
 				"_ENCODED_JIT_CONFIG": *jitconfig.EncodedJITConfig,
+				"_IMAGE_NAME":         s.runnerImageName,
+				"_REPOSITORY_ID":      s.runnerRespositoryID,
 			},
 		}
 
