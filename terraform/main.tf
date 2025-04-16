@@ -43,7 +43,6 @@ resource "google_service_account" "run_service_account" {
 }
 
 resource "google_kms_key_ring" "webhook_keyring" {
-
   project = var.project_id
 
   name     = "${var.kms_keyring_name}-${random_id.default.hex}"
@@ -57,7 +56,11 @@ resource "google_kms_key_ring" "webhook_keyring" {
 resource "google_kms_crypto_key" "webhook_app_private_key" {
   name     = "${var.kms_key_name}-${random_id.default.hex}"
   key_ring = google_kms_key_ring.webhook_keyring.id
-  purpose  = "ASYMMETRIC_SIGN"
+  purpose  = var.kms_key_purpose
+
+  version_template {
+    algorithm = var.kms_key_algorithm
+  }
 
   # There's no guarantee that the underlying crypto key version is actually created,
   # instead manually create the version
