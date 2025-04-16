@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -77,7 +76,7 @@ func TestHandleWebhook(t *testing.T) {
 			event := &github.WorkflowJobEvent{
 				Action: &tc.action,
 				WorkflowJob: &github.WorkflowJob{
-					Labels: []string{"self-hosted"},
+					Labels: []string{defaultRunnerLabel},
 				},
 				Installation: &github.Installation{
 					ID: &installationID,
@@ -142,12 +141,6 @@ func TestHandleWebhook(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// GitHub base URL expects a trailing slash
-			baseURL, err := url.Parse(fmt.Sprintf("%s/", fakeGitHub.URL))
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			mockCloudBuildClient := &MockCloudBuildClient{
 				createBuildRet: &cloudbuild.CreateBuildOperation{},
 			}
@@ -156,7 +149,7 @@ func TestHandleWebhook(t *testing.T) {
 				webhookSecret: []byte(tc.payloadWebhookSecret),
 				appClient:     app,
 				cbc:           mockCloudBuildClient,
-				baseURL:       baseURL,
+				ghAPIBaseURL:  fakeGitHub.URL,
 			}
 			srv.handleWebhook().ServeHTTP(resp, req)
 

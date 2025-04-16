@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 	"github.com/abcxyz/pkg/githubauth"
@@ -35,14 +34,16 @@ import (
 
 // Server provides the server implementation.
 type Server struct {
-	appClient     *githubauth.App
-	baseURL       *url.URL
-	buildLocation string
-	cbc           CloudBuildClient
-	h             *renderer.Renderer
-	kmc           KeyManagementClient
-	projectID     string
-	webhookSecret []byte
+	appClient           *githubauth.App
+	buildLocation       string
+	cbc                 CloudBuildClient
+	ghAPIBaseURL        string
+	h                   *renderer.Renderer
+	kmc                 KeyManagementClient
+	projectID           string
+	runnerImageName     string
+	runnerRespositoryID string
+	webhookSecret       []byte
 }
 
 // FileReader can read a file and return the content.
@@ -99,7 +100,11 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 		return nil, fmt.Errorf("failed to create app signer: %w", err)
 	}
 
-	appClient, err := githubauth.NewApp(cfg.GitHubAppID, signer)
+	options := []githubauth.Option{
+		githubauth.WithBaseURL(cfg.GitHubAPIBaseURL),
+	}
+
+	appClient, err := githubauth.NewApp(cfg.GitHubAppID, signer, options...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup app client: %w", err)
 	}
@@ -114,13 +119,16 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 	}
 
 	return &Server{
-		appClient:     appClient,
-		buildLocation: cfg.BuildLocation,
-		cbc:           cbc,
-		h:             h,
-		kmc:           kmc,
-		projectID:     cfg.ProjectID,
-		webhookSecret: webhookSecret,
+		appClient:           appClient,
+		buildLocation:       cfg.BuildLocation,
+		cbc:                 cbc,
+		ghAPIBaseURL:        cfg.GitHubAPIBaseURL,
+		h:                   h,
+		kmc:                 kmc,
+		projectID:           cfg.ProjectID,
+		runnerImageName:     cfg.RunnerImageName,
+		runnerRespositoryID: cfg.RunnerRespositoryID,
+		webhookSecret:       webhookSecret,
 	}, nil
 }
 
