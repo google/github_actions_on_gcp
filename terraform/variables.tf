@@ -124,3 +124,16 @@ variable "kms_key_name" {
   type        = string
   default     = "webhook-github-app-secret-key"
 }
+
+variable "kms_key_purpose" {
+  description = "Purpose of the GitHub App secret key."
+  type        = string
+  default     = "ASYMMETRIC_SIGN"
+}
+
+variable "kms_key_algorithm" {
+  description = "Algorithm of the GitHub App secret key."
+  type        = string
+  # This is how GitHub App private keys import as of 2025-02-25.
+  default = "RSA_SIGN_PKCS1_2048_SHA256"
+}

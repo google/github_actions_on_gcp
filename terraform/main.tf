@@ -56,7 +56,11 @@ resource "google_kms_key_ring" "webhook_keyring" {
 resource "google_kms_crypto_key" "webhook_app_private_key" {
   name     = "${var.kms_key_name}-${random_id.default.hex}"
   key_ring = google_kms_key_ring.webhook_keyring.id
-  purpose  = "ASYMMETRIC_SIGN"
+  purpose  = var.kms_key_purpose
+
+  version_template {
+    algorithm = var.kms_key_algorithm
+  }
 
   # There's no guarantee that the underlying crypto key version is actually created,
   # instead manually create the version
@@ -73,8 +77,6 @@ resource "google_kms_crypto_key" "webhook_app_private_key" {
 
 resource "google_kms_crypto_key_version" "app_private_key_version" {
   crypto_key = google_kms_crypto_key.webhook_app_private_key.id
-  # This is how GitHub App private keys import as of 2025-02-25.
-  algorithm = "RSA_SIGN_PKCS1_2048_SHA256"
 
   depends_on = [
     google_project_service.default["cloudkms.googleapis.com"],
