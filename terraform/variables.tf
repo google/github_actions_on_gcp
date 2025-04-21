@@ -137,3 +137,13 @@ variable "kms_key_algorithm" {
   # This is how GitHub App private keys import as of 2025-02-25.
   default = "RSA_SIGN_PKCS1_2048_SHA256"
 }
+
+variable "kms_key_version" {
+  description = "Version of the KMS key to use."
+  type        = string
+  default     = "1"
+  validation {
+    condition     = can(regex("^\\d+$", var.kms_key_version))
+    error_message = "The KMS key version must be a positive integer."
+  }
+}

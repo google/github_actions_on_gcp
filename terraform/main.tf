@@ -75,14 +75,6 @@ resource "google_kms_crypto_key" "webhook_app_private_key" {
   }
 }
 
-resource "google_kms_crypto_key_version" "app_private_key_version" {
-  crypto_key = google_kms_crypto_key.webhook_app_private_key.id
-
-  depends_on = [
-    google_project_service.default["cloudkms.googleapis.com"],
-  ]
-}
-
 module "gclb" {
   count = var.enable_gclb ? 1 : 0
 
@@ -116,7 +108,7 @@ module "cloud_run" {
   envvars = merge(
     var.envvars,
     {
-      "KMS_APP_PRIVATE_KEY_ID" : google_kms_crypto_key_version.app_private_key_version.id
+      "KMS_APP_PRIVATE_KEY_ID" : format("%s/cryptoKeyVersions/%s", google_kms_crypto_key.webhook_app_private_key.id, var.kms_key_version)
     }
   )
 
