@@ -21,3 +21,14 @@ gcloud run deploy webhook-go \
     --args=webhook,server \
     --set-env-vars=GITHUB_APP_ID=${GITHUB_APP_ID},PROJECT_ID=${PROJECT_ID},KMS_APP_PRIVATE_KEY_ID=${KMS_APP_PRIVATE_KEY_ID},BUILD_LOCATION=${BUILD_LOCATION},WEBHOOK_KEY_MOUNT_PATH=${WEBHOOK_KEY_MOUNT_PATH}
 ```
+
+## Importing GitHub App Private Key
+
+```shell
+go run github.com/abcxyz/github-token-minter/cmd/minty@main \
+    private-key import \
+    -key=${KEY_NAME} \
+    -key-ring=${KEY_RING_NAME} \
+    -project-id=${PROJECT_ID} \
+    -private-key=@${KEY_FILE_NAME}
+```
