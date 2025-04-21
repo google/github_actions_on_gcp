@@ -142,4 +142,8 @@ variable "kms_key_version" {
   description = "Version of the KMS key to use."
   type        = string
   default     = "1"
+  validation {
+    condition     = can(regex("^\\d+$", var.kms_key_version))
+    error_message = "The KMS key version must be a positive integer."
+  }
 }
