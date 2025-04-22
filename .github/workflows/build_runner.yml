@@ -17,7 +17,7 @@ env:
   WIF_PROVIDER: 'projects/727875687543/locations/global/workloadIdentityPools/github-actions-on-gcp-p-a63b4c/providers/github-actions-on-gcp-p-a63b4c'
   WIF_SERVICE_ACCOUNT: 'github-automation-bot@gha-on-gcp-p-a63b4c.iam.gserviceaccount.com'
   GAR_LOCATION: 'us'
-  GAR_IMAGE_NAME: 'ghss-artifacts-p-25/ghss-images/gha-runner'
+  GAR_IMAGE_NAME: 'ghss-artifacts-p-25/docker-images/gha-runner'
 
 # defaults:
 #   run:
