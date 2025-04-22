@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  WIF_PROVIDER: 'projects/gha-on-gcp-p-a63b4c/locations/global/workloadIdentityPools/github-actions-on-gcp-p-a63b4c/providers/github-actions-on-gcp-p-a63b4c'
+  WIF_PROVIDER: 'projects/727875687543/locations/global/workloadIdentityPools/github-actions-on-gcp-p-a63b4c/providers/github-actions-on-gcp-p-a63b4c'
   WIF_SERVICE_ACCOUNT: 'github-automation-bot@gha-on-gcp-p-a63b4c.iam.gserviceaccount.com'
   GAR_LOCATION: 'us-west1'
   GAR_IMAGE_NAME: 'github_actions_on_gcp/runner'
@@ -29,7 +29,7 @@ jobs:
     with:
       dockerfile: './runner/Dockerfile'
       artifact_registry_image_name: 'us-west1-docker.pkg.dev/github_actions_on_gcp/runner'
-      workload_identity_provider: 'projects/gha-on-gcp-p-a63b4c/locations/global/workloadIdentityPools/github-actions-on-gcp-p-a63b4c/providers/github-actions-on-gcp-p-a63b4c'
+      workload_identity_provider: 'projects/727875687543/locations/global/workloadIdentityPools/github-actions-on-gcp-p-a63b4c/providers/github-actions-on-gcp-p-a63b4c'
       wif_service_account: 'github-automation-bot@gha-on-gcp-p-a63b4c.iam.gserviceaccount.com'
       extra_hash_file1: './runner/start_runner.sh'
       extra_tag1: 'latest'
