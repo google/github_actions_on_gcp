@@ -1,4 +1,4 @@
-name: 'Build GitHub Actions Runner'
+name: 'build_runner'
 
 on:
   push:
@@ -28,7 +28,7 @@ permissions:
   id-token: 'write'
 
 jobs:
-  maybe-create-ci-image:
+  build_and_publish_workflow:
     uses: 'abcxyz/pkg/.github/workflows/maybe-build-docker.yml@main'
     with:
       dockerfile: './runner/Dockerfile'
@@ -38,8 +38,8 @@ jobs:
       extra_hash_file1: './runner/start_runner.sh'
       extra_tag1: 'latest'
 
-  build_container:
-    name: 'Build Docker image'
+  build_and_publish:
+    name: 'Build and publish Docker image'
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
