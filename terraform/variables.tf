@@ -43,7 +43,7 @@ variable "domains" {
 variable "image" {
   description = "Cloud Run service image name to deploy."
   type        = string
-  default     = "us-docker.pkg.dev/ghss-artifacts-p-25/docker-images/gha-runner:latest"
+  default     = "gcr.io/cloudrun/hello:latest"
 }
 
 variable "service_iam" {
