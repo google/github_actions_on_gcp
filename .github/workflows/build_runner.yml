@@ -32,7 +32,7 @@ jobs:
     uses: 'abcxyz/pkg/.github/workflows/maybe-build-docker.yml@main'
     with:
       dockerfile: './runner/Dockerfile'
-      artifact_registry_image_name: 'us-docker.pkg.dev/ghss-artifacts-p-25/gha-runner'
+      artifact_registry_image_name: '${{ env.GAR_LOCATION }}-docker.pkg.dev/ghss-artifacts-p-25/gha-runner'
       workload_identity_provider: 'projects/727875687543/locations/global/workloadIdentityPools/github-actions-on-gcp-p-a63b4c/providers/github-actions-on-gcp-p-a63b4c'
       wif_service_account: 'github-automation-bot@gha-on-gcp-p-a63b4c.iam.gserviceaccount.com'
       extra_hash_file1: './runner/start_runner.sh'
