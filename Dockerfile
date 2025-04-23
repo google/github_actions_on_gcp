@@ -21,4 +21,4 @@ COPY webhook /webhook
 # ENV PORT 8080
 
 ENTRYPOINT ["/webhook"]
-CMD ["webhook"]
+CMD ["webhook", "server"]
