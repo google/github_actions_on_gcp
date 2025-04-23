@@ -33,8 +33,9 @@ type Config struct {
 	KMSAppPrivateKeyID        string `env:"KMS_APP_PRIVATE_KEY_ID,required"`
 	ProjectID                 string `env:"PROJECT_ID,required"`
 	Port                      string `env:"PORT,default=8080"`
-	RunnerImageName           string `env:"RUNNER_IMAGE_NAME,default=default-runner"`
 	RunnerRespositoryID       string `env:"RUNNER_REPOSITORY_ID,required"`
+	RunnerImageName           string `env:"RUNNER_IMAGE_NAME,default=default-runner"`
+	RunnerImageTag            string `env:"RUNNER_IMAGE_TAG,default=latest"`
 }
 
 // Validate validates the webhook config after load.

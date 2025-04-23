@@ -41,8 +41,9 @@ type Server struct {
 	h                   *renderer.Renderer
 	kmc                 KeyManagementClient
 	projectID           string
-	runnerImageName     string
 	runnerRespositoryID string
+	runnerImageName     string
+	runnerImageTag      string
 	webhookSecret       []byte
 }
 
@@ -126,8 +127,9 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 		h:                   h,
 		kmc:                 kmc,
 		projectID:           cfg.ProjectID,
-		runnerImageName:     cfg.RunnerImageName,
 		runnerRespositoryID: cfg.RunnerRespositoryID,
+		runnerImageName:     cfg.RunnerImageName,
+		runnerImageTag:      cfg.RunnerImageTag,
 		webhookSecret:       webhookSecret,
 	}, nil
 }
