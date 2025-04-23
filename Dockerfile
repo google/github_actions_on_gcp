@@ -18,5 +18,5 @@ COPY webhook /webhook
 # ENV CONFIGS_DIR=/configs
 # ENV PORT 8080
 
-ENTRYPOINT ["/root"]
+ENTRYPOINT ["/webhook/root"]
 CMD ["webhook"]
