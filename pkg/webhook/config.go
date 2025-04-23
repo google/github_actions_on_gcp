@@ -53,6 +53,10 @@ func (cfg *Config) Validate() error {
 		return fmt.Errorf("WEBHOOK_KEY_MOUNT_PATH is required")
 	}
 
+	if cfg.GitHubWebhookKeyName == "" {
+		return fmt.Errorf("WEBHOOK_KEY_NAME is required")
+	}
+
 	if cfg.KMSAppPrivateKeyID == "" {
 		return fmt.Errorf("KMS_APP_PRIVATE_KEY_ID is required")
 	}
@@ -134,6 +138,13 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 		Target: &cfg.GitHubWebhookKeyMountPath,
 		EnvVar: "WEBHOOK_KEY_MOUNT_PATH",
 		Usage:  `GitHub webhook key mount path.`,
+	})
+
+	f.StringVar(&cli.StringVar{
+		Name:   "github-webhook-key-name",
+		Target: &cfg.GitHubWebhookKeyName,
+		EnvVar: "WEBHOOK_KEY_NAME",
+		Usage:  `GitHub webhook key name.`,
 	})
 
 	f.StringVar(&cli.StringVar{
