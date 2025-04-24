@@ -42,6 +42,7 @@ type Server struct {
 	kmc                 KeyManagementClient
 	projectID           string
 	runnerImageName     string
+	runnerImageTag      string
 	runnerRespositoryID string
 	webhookSecret       []byte
 }
@@ -81,7 +82,7 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 		fr = NewOSFileReader()
 	}
 
-	webhookSecret, err := fr.ReadFile(cfg.GitHubWebhookKeyMountPath)
+	webhookSecret, err := fr.ReadFile(fmt.Sprintf("%s/%s", cfg.GitHubWebhookKeyMountPath, cfg.GitHubWebhookKeyName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read webhook secret: %w", err)
 	}
@@ -126,8 +127,9 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 		h:                   h,
 		kmc:                 kmc,
 		projectID:           cfg.ProjectID,
-		runnerImageName:     cfg.RunnerImageName,
 		runnerRespositoryID: cfg.RunnerRespositoryID,
+		runnerImageName:     cfg.RunnerImageName,
+		runnerImageTag:      cfg.RunnerImageTag,
 		webhookSecret:       webhookSecret,
 	}, nil
 }

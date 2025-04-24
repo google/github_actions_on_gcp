@@ -75,6 +75,12 @@ resource "google_kms_crypto_key" "webhook_app_private_key" {
   }
 }
 
+resource "google_kms_crypto_key_iam_member" "webhook_app_private_key_view" {
+  crypto_key_id = google_kms_crypto_key.webhook_app_private_key.id
+  role          = "roles/cloudkms.cryptoKeyVersions.viewPublicKey"
+  member        = "serviceAccount:${google_service_account.run_service_account.email}"
+}
+
 module "gclb" {
   count = var.enable_gclb ? 1 : 0
 

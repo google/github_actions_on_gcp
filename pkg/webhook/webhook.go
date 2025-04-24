@@ -118,7 +118,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			Steps: []*cloudbuildpb.BuildStep{
 				{
 					Id:   "run",
-					Name: "$_REPOSITORY_ID/$_IMAGE_NAME:gcloud-c940d",
+					Name: "$_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
 					Env: []string{
 						"ENCODED_JIT_CONFIG=${_ENCODED_JIT_CONFIG}",
 					},
@@ -129,8 +129,9 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			},
 			Substitutions: map[string]string{
 				"_ENCODED_JIT_CONFIG": *jitconfig.EncodedJITConfig,
-				"_IMAGE_NAME":         s.runnerImageName,
 				"_REPOSITORY_ID":      s.runnerRespositoryID,
+				"_IMAGE_NAME":         s.runnerImageName,
+				"_IMAGE_TAG":          s.runnerImageTag,
 			},
 		}
 

@@ -30,10 +30,12 @@ type Config struct {
 	GitHubAPIBaseURL          string `env:"GITHUB_API_BASE_URL,default=https://api.github.com"`
 	GitHubAppID               string `env:"GITHUB_APP_ID,required"`
 	GitHubWebhookKeyMountPath string `env:"WEBHOOK_KEY_MOUNT_PATH,required"`
+	GitHubWebhookKeyName      string `env:"WEBHOOK_KEY_NAME,required"`
 	KMSAppPrivateKeyID        string `env:"KMS_APP_PRIVATE_KEY_ID,required"`
-	ProjectID                 string `env:"PROJECT_ID,required"`
 	Port                      string `env:"PORT,default=8080"`
+	ProjectID                 string `env:"PROJECT_ID,required"`
 	RunnerImageName           string `env:"RUNNER_IMAGE_NAME,default=default-runner"`
+	RunnerImageTag            string `env:"RUNNER_IMAGE_TAG,default=latest"`
 	RunnerRespositoryID       string `env:"RUNNER_REPOSITORY_ID,required"`
 }
 
@@ -49,6 +51,10 @@ func (cfg *Config) Validate() error {
 
 	if cfg.GitHubWebhookKeyMountPath == "" {
 		return fmt.Errorf("WEBHOOK_KEY_MOUNT_PATH is required")
+	}
+
+	if cfg.GitHubWebhookKeyName == "" {
+		return fmt.Errorf("WEBHOOK_KEY_NAME is required")
 	}
 
 	if cfg.KMSAppPrivateKeyID == "" {
@@ -135,11 +141,25 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 	})
 
 	f.StringVar(&cli.StringVar{
+		Name:   "github-webhook-key-name",
+		Target: &cfg.GitHubWebhookKeyName,
+		EnvVar: "WEBHOOK_KEY_NAME",
+		Usage:  `GitHub webhook key name.`,
+	})
+
+	f.StringVar(&cli.StringVar{
 		Name:    "runner-image-name",
 		Target:  &cfg.RunnerImageName,
 		EnvVar:  "RUNNER_IMAGE_NAME",
 		Default: "default-runner",
 		Usage:   `The runner image name.`,
+	})
+
+	f.StringVar(&cli.StringVar{
+		Name:   "runner-image-tag",
+		Target: &cfg.RunnerImageTag,
+		EnvVar: "RUNNER_IMAGE_TAG",
+		Usage:  `The runner image tag to pull`,
 	})
 
 	f.StringVar(&cli.StringVar{
