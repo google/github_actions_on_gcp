@@ -75,9 +75,15 @@ resource "google_kms_crypto_key" "webhook_app_private_key" {
   }
 }
 
-resource "google_kms_crypto_key_iam_member" "webhook_app_private_key_view" {
+resource "google_kms_crypto_key_iam_member" "webhook_app_private_key_public_key_viewer" {
   crypto_key_id = google_kms_crypto_key.webhook_app_private_key.id
-  role          = "roles/cloudkms.cryptoKeyVersions.viewPublicKey"
+  role          = "roles/cloudkms.publicKeyViewer"
+  member        = "serviceAccount:${google_service_account.run_service_account.email}"
+}
+
+resource "google_kms_crypto_key_iam_member" "webhook_app_private_key_signer" {
+  crypto_key_id = google_kms_crypto_key.webhook_app_private_key.id
+  role          = "roles/cloudkms.signer"
   member        = "serviceAccount:${google_service_account.run_service_account.email}"
 }
 
