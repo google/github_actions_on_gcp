@@ -1,61 +1,61 @@
-name: "build_webhook_container"
+name: 'build_webhook_container'
 
 on:
   push:
     branches:
-      - "main"
+      - 'main'
     paths:
-      - "runner/**"
+      - 'runner/**'
   workflow_dispatch:
 
 env:
-  WIF_PROVIDER: "projects/727875687543/locations/global/workloadIdentityPools/github-actions-on-gcp-p-a63b4c/providers/github-actions-on-gcp-p-a63b4c"
-  WIF_SERVICE_ACCOUNT: "github-automation-bot@gha-on-gcp-p-a63b4c.iam.gserviceaccount.com"
+  WIF_PROVIDER: 'projects/727875687543/locations/global/workloadIdentityPools/github-actions-on-gcp-p-a63b4c/providers/github-actions-on-gcp-p-a63b4c'
+  WIF_SERVICE_ACCOUNT: 'github-automation-bot@gha-on-gcp-p-a63b4c.iam.gserviceaccount.com'
 
-  DOCKER_REGISTRY: "us-docker.pkg.dev"
-  DOCKER_TAG: "${{ github.sha }}"
-  DOCKER_REPO: "us-docker.pkg.dev/ghss-artifacts-p-25/docker-images"
-  IMAGE_NAME: "gha-webhook"
-  TAG_ID: "ci-${{ github.run_id }}-${{ github.run_number }}"
-  INTEGRATION_SERVICE_NAME: "github-actions-on-gcp-36e3"
-  INTEGRATION_PROJECT_ID: "gha-on-gcp-webhook-p-10"
-  INTEGRATION_REGION: "us-central1"
+  DOCKER_REGISTRY: 'us-docker.pkg.dev'
+  DOCKER_TAG: '${{ github.sha }}'
+  DOCKER_REPO: 'us-docker.pkg.dev/ghss-artifacts-p-25/docker-images'
+  IMAGE_NAME: 'gha-webhook'
+  TAG_ID: 'ci-${{ github.run_id }}-${{ github.run_number }}'
+  INTEGRATION_SERVICE_NAME: 'github-actions-on-gcp-36e3'
+  INTEGRATION_PROJECT_ID: 'gha-on-gcp-webhook-p-10'
+  INTEGRATION_REGION: 'us-central1'
 
 permissions:
-  contents: "read"
-  id-token: "write"
+  contents: 'read'
+  id-token: 'write'
 
 jobs:
   build_and_publish:
-    name: "Build and publish Docker image"
-    runs-on: "ubuntu-latest"
+    name: 'Build and publish Docker image'
+    runs-on: 'ubuntu-latest'
     steps:
-      - name: "Checkout"
-        uses: "actions/checkout@v4"
+      - name: 'Checkout'
+        uses: 'actions/checkout@v4'
 
-      - name: "Setup Go"
-        uses: "actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a" # ratchet:actions/setup-go@v5
+      - name: 'Setup Go'
+        uses: 'actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a' # ratchet:actions/setup-go@v5
         with:
-          go-version-file: "go.mod"
+          go-version-file: 'go.mod'
 
-      - id: "auth"
-        name: "Authenticate to Google Cloud"
-        uses: "google-github-actions/auth@a6e2e39c0a0331da29f7fd2c2a20a427e8d3ad1f" # ratchet:google-github-actions/auth@v2
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@a6e2e39c0a0331da29f7fd2c2a20a427e8d3ad1f' # ratchet:google-github-actions/auth@v2
         with:
-          workload_identity_provider: "${{ env.WIF_PROVIDER }}"
-          service_account: "${{ env.WIF_SERVICE_ACCOUNT }}"
-          token_format: "access_token"
+          workload_identity_provider: '${{ env.WIF_PROVIDER }}'
+          service_account: '${{ env.WIF_SERVICE_ACCOUNT }}'
+          token_format: 'access_token'
 
-      - name: "Setup gcloud"
-        uses: "google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200" # ratchet:google-github-actions/setup-gcloud@v2
+      - name: 'Setup gcloud'
+        uses: 'google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200' # ratchet:google-github-actions/setup-gcloud@v2
         with:
-          version: "460.0.0"
+          version: '460.0.0'
 
-      - uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # ratchet:docker/login-action@v2
+      - uses: 'docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc' # ratchet:docker/login-action@v2
         with:
-          username: "oauth2accesstoken"
-          password: "${{ steps.auth.outputs.access_token }}"
-          registry: "${{ env.DOCKER_REGISTRY }}"
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth.outputs.access_token }}'
+          registry: '${{ env.DOCKER_REGISTRY }}'
 
       # goreleaser requires a tag to publish images to container registry.
       # We create a local tag to make it happy.
@@ -64,13 +64,13 @@ jobs:
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
           git tag -f "$(date "+%Y%m%d%H%M%S")"
 
-      - name: "Build the server container and push to the registry with goreleaser"
-        uses: "goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf" # ratchet:goreleaser/goreleaser-action@v6
+      - name: 'Build the server container and push to the registry with goreleaser'
+        uses: 'goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf' # ratchet:goreleaser/goreleaser-action@v6
         with:
-          version: "v1.12.3" # Manually pinned
-          args: "release -f .goreleaser.docker.yml --rm-dist --skip-validate"
+          version: 'v1.12.3' # Manually pinned
+          args: 'release -f .goreleaser.docker.yml --rm-dist --skip-validate'
 
-      - name: "Deploy to Cloud Run"
+      - name: 'Deploy to Cloud Run'
         run: |-
           gcloud run services update ${{ env.INTEGRATION_SERVICE_NAME }} \
             --project="${{ env.INTEGRATION_PROJECT_ID }}" \
