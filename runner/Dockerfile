@@ -1,52 +1,97 @@
-FROM ubuntu:24.04
-
-# References:
-# https://github.com/docker-library/docker/blob/master/27/dind-rootless/Dockerfile
-# https://github.com/docker-library/docker/blob/master/27/dind/Dockerfile
-# https://github.com/actions/runner/blob/main/images/Dockerfile
-# https://github.com/actions/actions-runner-controller/blob/master/runner/actions-runner-dind-rootless.ubuntu-20.04.dockerfile
+FROM gcr.io/cloud-builders/npm@sha256:e7ae25cd9213a0bd0cf401b3420c0d66cb8565db6230208d38a4e0b2b3c62168
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -y && apt-get upgrade -y && useradd -m runner
+WORKDIR /actions-runner
+COPY start_runner.sh /actions-runner/start_runner.sh
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    curl jq build-essential libssl-dev libffi-dev python3 python3-venv python3-dev python3-pip libicu-dev gnupg uidmap \
-    iproute2 iptables sudo unzip zip fuse-overlayfs
+# Install misc deps.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      coreutils \
+      curl \
+      git \
+      git-lfs \
+      gzip \
+      jq \
+      shellcheck \
+      sudo \
+      tar \
+      unzip \
+      yamllint \
+      zip \
+      zstd \
+    && apt-get clean \
+    && rm -r /var/lib/apt/lists/*
 
-# Set-up subuid and subgid so that "--userns-remap=default" works
-RUN set -eux; \
-    addgroup --system dockremap; \
-    adduser --system --ingroup dockremap dockremap; \
-    echo 'dockremap:165536:65536' >> /etc/subuid; \
-    echo 'dockremap:165536:65536' >> /etc/subgid
+RUN curl -f -L -o runner.tar.gz https://github.com/actions/runner/releases/download/v2.323.0/actions-runner-linux-x64-2.323.0.tar.gz \
+    && tar xzf ./runner.tar.gz \
+    && rm runner.tar.gz \
+    && chmod +x /actions-runner/start_runner.sh \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /actions-runner/externals/node20_alpine/ \
+    && rm -f /actions-runner/externals/node20/bin/node \
+    && ln -s $(which node) /actions-runner/externals/node20/bin/node \
+    && find /actions-runner/externals/node20/include/node/openssl/archs/. ! -name 'linux-x86_64' ! -name '.' -type d -exec rm -rf {} +
 
-# Make the rootless runner directory executable
-RUN mkdir /run/user/$RUNNER_UID \
-    && chown runner:runner /run/user/$RUNNER_UID \
-    && chmod a+x /run/user/$RUNNER_UID
+RUN /actions-runner/bin/installdependencies.sh \
+    && adduser --disabled-password --gecos "" --uid 1001 runner \
+    && groupadd docker --gid 997 \
+    && usermod -aG sudo runner \
+    && usermod -aG docker runner \
+    # Configure sudoers securely
+    && echo "%sudo ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/runner_sudo_access \
+    && echo "Defaults env_keep += \"DEBIAN_FRONTEND\"" >> /etc/sudoers.d/runner_sudo_access \
+    # Define secure_path for sudo
+    && echo "Defaults    secure_path = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /etc/sudoers.d/secure_path_default \
+    && chmod 0440 /etc/sudoers.d/runner_sudo_access \
+    && chmod 0440 /etc/sudoers.d/secure_path_default \    
+    && rm -rf /var/lib/apt/lists/*
 
-# Dynamically find and download the latest runner version.
-RUN cd /home/runner && mkdir actions-runner && cd actions-runner \
-    && curl -o actions-runner-linux-x64.tar.gz \
-    -L $(curl -s https://api.github.com/repos/actions/runner/releases/latest \
-    | grep browser_download_url \
-    | grep actions-runner-linux-x64 \
-    | cut -d'"' -f4) \
-    && tar xzf ./actions-runner-linux-x64.tar.gz
+# Install Python.
+RUN apt-get update -y && \
+  apt-get -y install --no-install-recommends \
+  python3 \
+  python3-dev \
+  python3-pip \
+  python3-venv \
+  && rm -rf /var/lib/apt/lists/* \
+  && python3 -m pip install pipx \
+  && python3 -m pipx ensurepath \
+  && python3 --version
 
-RUN chown -R runner ~runner && /home/runner/actions-runner/bin/installdependencies.sh
+# Install docker.
+WORKDIR /install/docker/
+RUN apt-get -y update \
+    && install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+    && chmod a+r /etc/apt/keyrings/docker.asc \
+    && echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+        tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update -y \
+    && apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker --version
 
-COPY start_runner.sh start_runner.sh
-RUN chmod +x start_runner.sh
+# Install gh CLI.
+ARG GH_VERSION=2.70.0
+ARG GH_PACKAGE=gh_${GH_VERSION}_linux_amd64.tar.gz
+ARG GH_INSTALL_DIR=/opt/gh-cli-${GH_VERSION}
+WORKDIR /install/github-cli/
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends wget tar ca-certificates && \
+    wget -q https://github.com/cli/cli/releases/download/v${GH_VERSION}/${GH_PACKAGE} -O /tmp/${GH_PACKAGE} && \
+    tar -xzf /tmp/${GH_PACKAGE} -C /opt && \
+    mv /opt/gh_${GH_VERSION}_linux_amd64/bin/gh /usr/local/bin/gh && \
+    chmod +x /usr/local/bin/gh && \
+    gh --version && \
+    rm -rf /tmp/${GH_PACKAGE} /opt/gh_${GH_VERSION}_linux_amd64 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /home/runner
 USER runner
 
-ENV SKIP_IPTABLES=1
-# Something fails without FORCE_ROOTLESS_INSTALL but it doesn't seem to break any functionality.
-ENV FORCE_ROOTLESS_INSTALL=1
-RUN curl -fsSL https://get.docker.com/rootless | sh && /home/runner/bin/docker -v
-
-# TODO: This might not be necessary.
-# Create folder structure here to avoid permission issues when mounting the daemon.json file from a configmap.
-RUN mkdir -p /home/runner/.config/docker
-
-ENTRYPOINT ["./start_runner.sh"]
+ENTRYPOINT ["/actions-runner/start_runner.sh"]
