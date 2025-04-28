@@ -1,8 +1,6 @@
 FROM gcr.io/cloud-builders/npm@sha256:e7ae25cd9213a0bd0cf401b3420c0d66cb8565db6230208d38a4e0b2b3c62168
 
 ENV DEBIAN_FRONTEND=noninteractive
-WORKDIR /actions-runner
-COPY start_runner.sh /actions-runner/start_runner.sh
 
 # Install misc deps.
 RUN apt-get update \
@@ -90,6 +88,9 @@ RUN apt-get update && \
     rm -rf /tmp/${GH_PACKAGE} /opt/gh_${GH_VERSION}_linux_amd64 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+WORKDIR /actions-runner
+COPY start_runner.sh /actions-runner/start_runner.sh
 
 WORKDIR /home/runner
 USER runner
