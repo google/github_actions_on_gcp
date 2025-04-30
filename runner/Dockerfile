@@ -2,6 +2,8 @@ FROM gcr.io/cloud-builders/npm@sha256:e7ae25cd9213a0bd0cf401b3420c0d66cb8565db62
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+WORKDIR /actions-runner
+
 # Install misc deps.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -89,7 +91,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /actions-runner
 COPY start_runner.sh /actions-runner/start_runner.sh
 
 WORKDIR /home/runner
