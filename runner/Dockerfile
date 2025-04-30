@@ -27,7 +27,6 @@ RUN apt-get update \
 RUN curl -f -L -o runner.tar.gz https://github.com/actions/runner/releases/download/v2.323.0/actions-runner-linux-x64-2.323.0.tar.gz \
     && tar xzf ./runner.tar.gz \
     && rm runner.tar.gz \
-    && chmod +x /actions-runner/start_runner.sh \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /actions-runner/externals/node20_alpine/ \
     && rm -f /actions-runner/externals/node20/bin/node \
@@ -92,6 +91,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY start_runner.sh /actions-runner/start_runner.sh
+RUN chmod +x /actions-runner/start_runner.sh
 
 WORKDIR /home/runner
 USER runner
