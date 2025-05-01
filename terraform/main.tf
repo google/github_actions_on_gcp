@@ -117,6 +117,12 @@ module "cloud_run" {
     invokers   = toset(var.service_iam.invokers)
   }
 
+  additional_revision_annotations = {
+    # GitHub webhooks call without authorization so the service
+    # must allow unauthenticated requests to come through
+    "run.googleapis.com/invoker-iam-disabled" : true
+  }
+
   envvars = merge(
     var.envvars,
     {
@@ -136,7 +142,7 @@ module "cloud_run" {
 
 # allow the ci service account to act as the cloud run service account
 # this allows the ci service account to deploy new revisions for the
-# cloud run sevice
+# cloud run service
 resource "google_service_account_iam_member" "run_sa_ci_binding" {
   service_account_id = google_service_account.run_service_account.name
   role               = "roles/iam.serviceAccountUser"
