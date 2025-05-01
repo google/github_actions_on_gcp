@@ -78,12 +78,12 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 	switch event := event.(type) {
 	case *github.WorkflowJobEvent:
 		if event.Action == nil || *event.Action != "queued" {
-			return &apiResponse{http.StatusNoContent, fmt.Sprintf("no action taken for action type: %q", *event.Action), nil}
+			return &apiResponse{http.StatusOK, fmt.Sprintf("no action taken for action type: %q", *event.Action), nil}
 		}
 
 		if !slices.Contains(event.WorkflowJob.Labels, defaultRunnerLabel) {
 			logger.InfoContext(ctx, "no action taken for labels", "labels", event.WorkflowJob.Labels)
-			return &apiResponse{http.StatusNoContent, fmt.Sprintf("no action taken for labels: %s", event.WorkflowJob.Labels), nil}
+			return &apiResponse{http.StatusOK, fmt.Sprintf("no action taken for labels: %s", event.WorkflowJob.Labels), nil}
 		}
 
 		installation, err := s.appClient.InstallationForID(ctx, strconv.FormatInt(*event.Installation.ID, 10))
