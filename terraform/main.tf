@@ -120,7 +120,7 @@ module "cloud_run" {
   additional_revision_annotations = {
     # GitHub webhooks call without authorization so the service
     # must allow unauthenticated requests to come through
-    "run.googleapis.com/invoker-iam-disabled" : true
+    "run.googleapis.com/invoker-iam-disabled" : "true"
   }
 
   envvars = merge(
