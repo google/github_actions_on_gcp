@@ -130,7 +130,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			},
 			Substitutions: map[string]string{
 				"_ENCODED_JIT_CONFIG": *jitconfig.EncodedJITConfig,
-				"_REPOSITORY_ID":      s.runnerRespositoryID,
+				"_REPOSITORY_ID":      s.runnerRepositoryID,
 				"_IMAGE_NAME":         s.runnerImageName,
 				"_IMAGE_TAG":          s.runnerImageTag,
 			},

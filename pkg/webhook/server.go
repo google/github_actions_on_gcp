@@ -43,7 +43,7 @@ type Server struct {
 	runnerProjectID      string
 	runnerImageName      string
 	runnerImageTag       string
-	runnerRespositoryID  string
+	runnerRepositoryID   string
 	runnerServiceAccount string
 	webhookSecret        []byte
 }
@@ -130,7 +130,7 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 		runnerImageName:      cfg.RunnerImageName,
 		runnerImageTag:       cfg.RunnerImageTag,
 		runnerProjectID:      cfg.RunnerProjectID,
-		runnerRespositoryID:  cfg.RunnerRepositoryID,
+		runnerRepositoryID:   cfg.RunnerRepositoryID,
 		runnerServiceAccount: cfg.RunnerServiceAccount,
 		webhookSecret:        webhookSecret,
 	}, nil
