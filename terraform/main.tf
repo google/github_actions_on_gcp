@@ -18,6 +18,7 @@ resource "random_id" "default" {
 
 resource "google_project_service" "default" {
   for_each = toset([
+    "cloudbuild.googleapis.com",
     "cloudkms.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "logging.googleapis.com",
@@ -100,7 +101,7 @@ module "gclb" {
 }
 
 module "cloud_run" {
-  source = "git::https://github.com/abcxyz/terraform-modules.git//modules/cloud_run?ref=ebaccaa0c906e89813e3b0b71fc5fc6be9ef0cdb"
+  source = "git::https://github.com/abcxyz/terraform-modules.git//modules/cloud_run?ref=1467eaf0115f71613727212b0b51b3f99e699842"
 
   project_id = var.project_id
 
@@ -117,7 +118,7 @@ module "cloud_run" {
     invokers   = toset(var.service_iam.invokers)
   }
 
-  additional_revision_annotations = {
+  additional_service_annotations = {
     # GitHub webhooks call without authorization so the service
     # must allow unauthenticated requests to come through
     "run.googleapis.com/invoker-iam-disabled" : true
