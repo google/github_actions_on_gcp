@@ -36,7 +36,7 @@ type Config struct {
 	RunnerImageName           string `env:"RUNNER_IMAGE_NAME,default=default-runner"`
 	RunnerImageTag            string `env:"RUNNER_IMAGE_TAG,default=latest"`
 	RunnerProjectID           string `env:"RUNNER_PROJECT_ID,required"`
-	RunnerRespositoryID       string `env:"RUNNER_REPOSITORY_ID,required"`
+	RunnerRepositoryID        string `env:"RUNNER_REPOSITORY_ID,required"`
 	RunnerServiceAccount      string `env:"RUNNER_SERVICE_ACCOUNT,required"`
 }
 
@@ -66,7 +66,7 @@ func (cfg *Config) Validate() error {
 		return fmt.Errorf("RUNNER_PROJECT_ID is required")
 	}
 
-	if cfg.RunnerRespositoryID == "" {
+	if cfg.RunnerRepositoryID == "" {
 		return fmt.Errorf("RUNNER_REPOSITORY_ID is required")
 	}
 
@@ -169,7 +169,7 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 
 	f.StringVar(&cli.StringVar{
 		Name:   "runner-repository-id",
-		Target: &cfg.RunnerRespositoryID,
+		Target: &cfg.RunnerRepositoryID,
 		EnvVar: "RUNNER_REPOSITORY_ID",
 		Usage:  `The GAR repository that holds the runner image`,
 	})

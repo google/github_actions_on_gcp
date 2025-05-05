@@ -130,7 +130,7 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 		runnerImageName:      cfg.RunnerImageName,
 		runnerImageTag:       cfg.RunnerImageTag,
 		runnerProjectID:      cfg.RunnerProjectID,
-		runnerRespositoryID:  cfg.RunnerRespositoryID,
+		runnerRespositoryID:  cfg.RunnerRepositoryID,
 		runnerServiceAccount: cfg.RunnerServiceAccount,
 		webhookSecret:        webhookSecret,
 	}, nil
