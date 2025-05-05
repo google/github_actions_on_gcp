@@ -34,17 +34,18 @@ import (
 
 // Server provides the server implementation.
 type Server struct {
-	appClient           *githubauth.App
-	buildLocation       string
-	cbc                 CloudBuildClient
-	ghAPIBaseURL        string
-	h                   *renderer.Renderer
-	kmc                 KeyManagementClient
-	projectID           string
-	runnerImageName     string
-	runnerImageTag      string
-	runnerRespositoryID string
-	webhookSecret       []byte
+	appClient            *githubauth.App
+	buildLocation        string
+	cbc                  CloudBuildClient
+	ghAPIBaseURL         string
+	h                    *renderer.Renderer
+	kmc                  KeyManagementClient
+	runnerProjectID      string
+	runnerImageName      string
+	runnerImageTag       string
+	runnerRepositoryID   string
+	runnerServiceAccount string
+	webhookSecret        []byte
 }
 
 // FileReader can read a file and return the content.
@@ -120,17 +121,18 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 	}
 
 	return &Server{
-		appClient:           appClient,
-		buildLocation:       cfg.BuildLocation,
-		cbc:                 cbc,
-		ghAPIBaseURL:        cfg.GitHubAPIBaseURL,
-		h:                   h,
-		kmc:                 kmc,
-		projectID:           cfg.ProjectID,
-		runnerRespositoryID: cfg.RunnerRespositoryID,
-		runnerImageName:     cfg.RunnerImageName,
-		runnerImageTag:      cfg.RunnerImageTag,
-		webhookSecret:       webhookSecret,
+		appClient:            appClient,
+		buildLocation:        cfg.BuildLocation,
+		cbc:                  cbc,
+		ghAPIBaseURL:         cfg.GitHubAPIBaseURL,
+		h:                    h,
+		kmc:                  kmc,
+		runnerImageName:      cfg.RunnerImageName,
+		runnerImageTag:       cfg.RunnerImageTag,
+		runnerProjectID:      cfg.RunnerProjectID,
+		runnerRepositoryID:   cfg.RunnerRepositoryID,
+		runnerServiceAccount: cfg.RunnerServiceAccount,
+		webhookSecret:        webhookSecret,
 	}, nil
 }
 
@@ -144,7 +146,7 @@ func (s *Server) Routes(ctx context.Context) http.Handler {
 	mux.Handle("/version", s.handleVersion())
 
 	// Middleware
-	root := logging.HTTPInterceptor(logger, s.projectID)(mux)
+	root := logging.HTTPInterceptor(logger, s.runnerProjectID)(mux)
 
 	return root
 }
