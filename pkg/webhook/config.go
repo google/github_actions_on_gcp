@@ -35,7 +35,7 @@ type Config struct {
 	Port                      string `env:"PORT,default=8080"`
 	RunnerImageName           string `env:"RUNNER_IMAGE_NAME,default=default-runner"`
 	RunnerImageTag            string `env:"RUNNER_IMAGE_TAG,default=latest"`
-	RunnerProjectID           string `env="RUNNER_PROJECT_ID,required"`
+	RunnerProjectID           string `env:"RUNNER_PROJECT_ID,required"`
 	RunnerRespositoryID       string `env:"RUNNER_REPOSITORY_ID,required"`
 	RunnerServiceAccount      string `env:"RUNNER_SERVICE_ACCOUNT,required"`
 }
