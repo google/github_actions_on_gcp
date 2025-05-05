@@ -115,6 +115,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 		}
 
 		build := &cloudbuildpb.Build{
+			ServiceAccount: s.runnerServiceAccount,
 			Steps: []*cloudbuildpb.BuildStep{
 				{
 					Id:   "run",
@@ -136,8 +137,8 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 		}
 
 		buildReq := &cloudbuildpb.CreateBuildRequest{
-			Parent:    fmt.Sprintf("projects/%s/locations/%s", s.projectID, s.buildLocation),
-			ProjectId: s.projectID,
+			Parent:    fmt.Sprintf("projects/%s/locations/%s", s.runnerProjectID, s.buildLocation),
+			ProjectId: s.runnerProjectID,
 			Build:     build,
 		}
 

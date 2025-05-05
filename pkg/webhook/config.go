@@ -33,10 +33,11 @@ type Config struct {
 	GitHubWebhookKeyName      string `env:"WEBHOOK_KEY_NAME,required"`
 	KMSAppPrivateKeyID        string `env:"KMS_APP_PRIVATE_KEY_ID,required"`
 	Port                      string `env:"PORT,default=8080"`
-	ProjectID                 string `env:"PROJECT_ID,required"`
 	RunnerImageName           string `env:"RUNNER_IMAGE_NAME,default=default-runner"`
 	RunnerImageTag            string `env:"RUNNER_IMAGE_TAG,default=latest"`
+	RunnerProjectID           string `env:"PROJECT_ID,required"`
 	RunnerRespositoryID       string `env:"RUNNER_REPOSITORY_ID,required"`
+	RunnerServiceAccount      string `env:"RUNNER_SERVICE_ACCOUNT,required"`
 }
 
 // Validate validates the webhook config after load.
@@ -61,12 +62,16 @@ func (cfg *Config) Validate() error {
 		return fmt.Errorf("KMS_APP_PRIVATE_KEY_ID is required")
 	}
 
-	if cfg.ProjectID == "" {
-		return fmt.Errorf("PROJECT_ID is required")
+	if cfg.RunnerProjectID == "" {
+		return fmt.Errorf("RUNNER_PROJECT_ID is required")
 	}
 
 	if cfg.RunnerRespositoryID == "" {
 		return fmt.Errorf("RUNNER_REPOSITORY_ID is required")
+	}
+
+	if cfg.RunnerServiceAccount == "" {
+		return fmt.Errorf("RUNNER_SERVICE_ACCOUNT is required")
 	}
 
 	return nil
@@ -119,10 +124,10 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 	})
 
 	f.StringVar(&cli.StringVar{
-		Name:   "project-id",
-		Target: &cfg.ProjectID,
-		EnvVar: "PROJECT_ID",
-		Usage:  `Google Cloud project ID.`,
+		Name:   "runner-project-id",
+		Target: &cfg.RunnerProjectID,
+		EnvVar: "RUNNER_PROJECT_ID",
+		Usage:  `Google Cloud project ID where the runner will execute.`,
 	})
 
 	f.StringVar(&cli.StringVar{
@@ -167,6 +172,13 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 		Target: &cfg.RunnerRespositoryID,
 		EnvVar: "RUNNER_REPOSITORY_ID",
 		Usage:  `The GAR repository that holds the runner image`,
+	})
+
+	f.StringVar(&cli.StringVar{
+		Name:   "runner-service-account",
+		Target: &cfg.RunnerServiceAccount,
+		EnvVar: "RUNNER_SERVICE_ACCOUNT",
+		Usage:  `The service account the runner should execute as`,
 	})
 
 	return set

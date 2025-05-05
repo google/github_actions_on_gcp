@@ -87,7 +87,7 @@ func TestWebhookServerCommand(t *testing.T) {
 			expErr: `KMS_APP_PRIVATE_KEY_ID is required`,
 		},
 		{
-			name: "invalid_config_project_id",
+			name: "invalid_config_runner_project_id",
 			env: map[string]string{
 				"BUILD_LOCATION":         "build-location",
 				"GITHUB_APP_ID":          "github-app-id",
@@ -95,7 +95,7 @@ func TestWebhookServerCommand(t *testing.T) {
 				"WEBHOOK_KEY_NAME":       "key-name",
 				"KMS_APP_PRIVATE_KEY_ID": "kms-app-private-key-id",
 			},
-			expErr: `PROJECT_ID is required`,
+			expErr: `RUNNER_PROJECT_ID is required`,
 		},
 		{
 			name: "invalid_runner_repository_id",
@@ -105,9 +105,22 @@ func TestWebhookServerCommand(t *testing.T) {
 				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
 				"WEBHOOK_KEY_NAME":       "key-name",
 				"KMS_APP_PRIVATE_KEY_ID": "kms-app-private-key-id",
-				"PROJECT_ID":             "project-id",
+				"RUNNER_PROJECT_ID":      "project-id",
 			},
 			expErr: `RUNNER_REPOSITORY_ID is required`,
+		},
+		{
+			name: "invalid_config_runner_service_account",
+			env: map[string]string{
+				"BUILD_LOCATION":         "build-location",
+				"GITHUB_APP_ID":          "github-app-id",
+				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
+				"WEBHOOK_KEY_NAME":       "key-name",
+				"KMS_APP_PRIVATE_KEY_ID": "kms-app-private-key-id",
+				"RUNNER_PROJECT_ID":      "runner-project-id",
+				"RUNNER_REPOSITORY_ID":   "runner-repo-id",
+			},
+			expErr: `RUNNER_SERVICE_ACCOUNT is required`,
 		},
 		{
 			name: "happy_path",
@@ -117,8 +130,9 @@ func TestWebhookServerCommand(t *testing.T) {
 				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
 				"WEBHOOK_KEY_NAME":       "key-name",
 				"KMS_APP_PRIVATE_KEY_ID": "kms-app-private-key-id",
-				"PROJECT_ID":             "project-id",
+				"RUNNER_PROJECT_ID":      "runner-project-id",
 				"RUNNER_REPOSITORY_ID":   "runner-repo-id",
+				"RUNNER_SERVICE_ACCOUNT": "runner-service-account",
 			},
 			fileMock: &webhook.MockFileReader{
 				ReadFileMock: &webhook.ReadFileResErr{
