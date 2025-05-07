@@ -1,12 +1,18 @@
-FROM gcr.io/cloud-builders/npm@sha256:e7ae25cd9213a0bd0cf401b3420c0d66cb8565db6230208d38a4e0b2b3c62168
+FROM ubuntu@sha256:dc17125eaac86538c57da886e494a34489122fb6a3ebb6411153d742594c2ddc
 
 ENV DEBIAN_FRONTEND=noninteractive
+
+ARG ACTION_RUNNER_VERSION=2.323.0
+ARG GH_VERSION=2.70.0
+ARG GH_PACKAGE=gh_${GH_VERSION}_linux_amd64.tar.gz
+ARG GH_INSTALL_DIR=/opt/gh-cli-${GH_VERSION}
 
 WORKDIR /actions-runner
 
 # Install misc deps.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+      adduser \
       ca-certificates \
       coreutils \
       curl \
@@ -25,14 +31,10 @@ RUN apt-get update \
     && apt-get clean \
     && rm -r /var/lib/apt/lists/*
 
-RUN curl -f -L -o runner.tar.gz https://github.com/actions/runner/releases/download/v2.323.0/actions-runner-linux-x64-2.323.0.tar.gz \
+RUN curl -f -L -o runner.tar.gz https://github.com/actions/runner/releases/download/v${ACTION_RUNNER_VERSION}/actions-runner-linux-x64-${ACTION_RUNNER_VERSION}.tar.gz \
     && tar xzf ./runner.tar.gz \
     && rm runner.tar.gz \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /actions-runner/externals/node20_alpine/ \
-    && rm -f /actions-runner/externals/node20/bin/node \
-    && ln -s $(which node) /actions-runner/externals/node20/bin/node \
-    && find /actions-runner/externals/node20/include/node/openssl/archs/. ! -name 'linux-x86_64' ! -name '.' -type d -exec rm -rf {} +
+    && rm -rf /var/lib/apt/lists/*
 
 RUN /actions-runner/bin/installdependencies.sh \
     && adduser --disabled-password --gecos "" --uid 1001 runner \
@@ -45,7 +47,7 @@ RUN /actions-runner/bin/installdependencies.sh \
     # Define secure_path for sudo
     && echo "Defaults    secure_path = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /etc/sudoers.d/secure_path_default \
     && chmod 0440 /etc/sudoers.d/runner_sudo_access \
-    && chmod 0440 /etc/sudoers.d/secure_path_default \    
+    && chmod 0440 /etc/sudoers.d/secure_path_default \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python.
@@ -55,8 +57,8 @@ RUN apt-get update -y && \
   python3-dev \
   python3-pip \
   python3-venv \
+  pipx \
   && rm -rf /var/lib/apt/lists/* \
-  && python3 -m pip install pipx \
   && python3 -m pipx ensurepath \
   && python3 --version
 
@@ -64,10 +66,10 @@ RUN apt-get update -y && \
 WORKDIR /install/docker/
 RUN apt-get -y update \
     && install -m 0755 -d /etc/apt/keyrings \
-    && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
     && chmod a+r /etc/apt/keyrings/docker.asc \
     && echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
         $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
         tee /etc/apt/sources.list.d/docker.list > /dev/null \
     && apt-get update -y \
@@ -76,9 +78,6 @@ RUN apt-get -y update \
     && docker --version
 
 # Install gh CLI.
-ARG GH_VERSION=2.70.0
-ARG GH_PACKAGE=gh_${GH_VERSION}_linux_amd64.tar.gz
-ARG GH_INSTALL_DIR=/opt/gh-cli-${GH_VERSION}
 WORKDIR /install/github-cli/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends wget tar ca-certificates && \
