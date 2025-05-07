@@ -6,11 +6,6 @@ on:
       - 'main'
     paths:
       - 'runner/**'
-  pull_request:
-    branches:
-      - 'main'
-    paths:
-      - 'runner/**'
   workflow_dispatch:
 
 env:
