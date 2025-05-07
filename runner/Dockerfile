@@ -14,6 +14,7 @@ RUN apt-get update \
       git-lfs \
       gzip \
       jq \
+      lsb-release \
       shellcheck \
       sudo \
       tar \
