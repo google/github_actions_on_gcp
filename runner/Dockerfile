@@ -57,8 +57,8 @@ RUN apt-get update -y && \
   python3-dev \
   python3-pip \
   python3-venv \
+  pipx \
   && rm -rf /var/lib/apt/lists/* \
-  && python3 -m pip install pipx \
   && python3 -m pipx ensurepath \
   && python3 --version
 
