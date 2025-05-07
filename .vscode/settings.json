@@ -3,5 +3,9 @@
   "yaml.format.singleQuote": true,
   "go.formatTool": "gofumpt",
   "go.lintTool": "golangci-lint",
-  "go.lintFlags": ["--fast"]
+  "go.lintFlags": ["--fast"],
+  "[dockerfile]": {
+    // Keeps messing with desired formatting
+    "editor.formatOnSave": false
+  }
 }
