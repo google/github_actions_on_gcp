@@ -12,6 +12,7 @@ WORKDIR /actions-runner
 # Install misc deps.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+      adduser \
       ca-certificates \
       coreutils \
       curl \
