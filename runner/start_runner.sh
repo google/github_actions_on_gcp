@@ -33,6 +33,7 @@ while true; do
     if [ ${ELAPSED_SECONDS} -ge ${TIMEOUT_SECONDS} ]; then
         echo "Timeout: Docker daemon did not become available after ${TIMEOUT_SECONDS} seconds."
         echo "Please check Docker daemon logs for errors: sudo cat /var/log/dockerd.log"
+        sudo cat /var/log/dockerd.log
         echo "Current status of ${DOCKER_SOCKET}:"
         sudo ls -l "${DOCKER_SOCKET}" || echo "Socket ${DOCKER_SOCKET} not found."
         echo "Unable to configure docker daemon, exiting."
@@ -40,7 +41,7 @@ while true; do
     fi
 
     # Check if socket file exists and then if 'sudo docker info' works
-    if [ -S "${DOCKER_SOCKET}" ] && sudo -n docker info > /dev/null 2>&1; then
+    if [ -S "${DOCKER_SOCKET}" ] && sudo -n docker info >/dev/null 2>&1; then
         echo # Newline for cleaner output
         echo "Docker daemon socket detected at ${DOCKER_SOCKET} and is responsive to 'sudo docker info'."
         # Allow system to stabilize socket permissions fully
@@ -49,14 +50,14 @@ while true; do
     fi
 
     # Progress indicator
-    echo -n "." 
+    echo -n "."
 
     sleep ${WAIT_INTERVAL_SECONDS}
     ELAPSED_SECONDS=$((ELAPSED_SECONDS + WAIT_INTERVAL_SECONDS))
 done
 
 # Final check: can the current user ('runner') access Docker without sudo?
-if docker info > /dev/null 2>&1; then
+if docker info >/dev/null 2>&1; then
     echo "SUCCESS: Docker daemon is responsive to the 'runner' user."
 else
     echo "ERROR: 'docker info' as 'runner' user (UID $(id -u)) failed."
