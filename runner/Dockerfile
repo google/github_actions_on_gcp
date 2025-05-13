@@ -77,9 +77,6 @@ RUN apt-get -y update \
     && rm -rf /var/lib/apt/lists/* \
     && docker --version
 
-RUN mkdir -p /etc/docker \
-    && echo '{ "storage-driver": "vfs" }' > /etc/docker/daemon.json
-
 # Install gh CLI.
 WORKDIR /install/github-cli/
 RUN apt-get update && \
