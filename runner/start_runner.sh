@@ -22,7 +22,7 @@ sudo sh -c "dockerd \
     --host=unix:///var/run/docker.sock \
     --host=tcp://0.0.0.0:2375 \
     --group=\"$DOCKER_SOCKET_GROUP\" \
-    --storage-driver=overlay2 \
+    --storage-driver=vfs \
     > /var/log/dockerd.log 2>&1" &
 
 # Wait for the Docker socket to be available and the daemon to be responsive
