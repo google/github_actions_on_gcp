@@ -127,10 +127,6 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 						// https://rootlesscontaine.rs/getting-started/common/apparmor/
 						"docker run --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -eENCODED_JIT_CONFIG=$_ENCODED_JIT_CONFIG $_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
 					},
-					// Name: "$_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
-					// Env: []string{
-					// 	"ENCODED_JIT_CONFIG=${_ENCODED_JIT_CONFIG}",
-					// },
 				},
 			},
 			Options: &cloudbuildpb.BuildOptions{

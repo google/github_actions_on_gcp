@@ -3,9 +3,6 @@ set -e
 
 echo "Attempting to start Docker daemon..."
 
-echo "Current disk space before starting dockerd:"
-df -h
-
 # Determine the GID of the 'docker' group. This group is created in the Dockerfile.
 DOCKER_GROUP_ID=$(getent group docker | cut -d: -f3)
 
@@ -18,6 +15,7 @@ else
 fi
 
 # Start the Docker daemon in the background using sudo.
+# overlay2 doesn't work in the Docker-in-Docker on GCB scenario.
 sudo sh -c "dockerd \
     --host=unix:///var/run/docker.sock \
     --host=tcp://0.0.0.0:2375 \
@@ -44,7 +42,7 @@ while true; do
     fi
 
     # Check if socket file exists and then if 'sudo docker info' works
-    if [ -S "${DOCKER_SOCKET}" ] && sudo -n docker info >/dev/null 2>&1; then
+    if [ -S "${DOCKER_SOCKET}" ] && sudo -n docker info > /dev/null 2>&1; then
         echo # Newline for cleaner output
         echo "Docker daemon socket detected at ${DOCKER_SOCKET} and is responsive to 'sudo docker info'."
         # Allow system to stabilize socket permissions fully
@@ -60,7 +58,7 @@ while true; do
 done
 
 # Final check: can the current user ('runner') access Docker without sudo?
-if docker info >/dev/null 2>&1; then
+if docker info > /dev/null 2>&1; then
     echo "SUCCESS: Docker daemon is responsive to the 'runner' user."
 else
     echo "ERROR: 'docker info' as 'runner' user (UID $(id -u)) failed."
