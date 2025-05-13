@@ -118,11 +118,6 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			ServiceAccount: s.runnerServiceAccount,
 			Steps: []*cloudbuildpb.BuildStep{
 				{
-					Id:   "prune-docker",
-					Name: "gcr.io/cloud-builders/docker",
-					Args: []string{"system", "prune", "--all", "--force"},
-				},
-				{
 					Id:         "run",
 					Name:       "gcr.io/cloud-builders/docker",
 					Entrypoint: "bash",
