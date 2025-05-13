@@ -3,6 +3,9 @@ set -e
 
 echo "Attempting to start Docker daemon..."
 
+echo "Current disk space before starting dockerd:"
+df -h
+
 # Determine the GID of the 'docker' group. This group is created in the Dockerfile.
 DOCKER_GROUP_ID=$(getent group docker | cut -d: -f3)
 
