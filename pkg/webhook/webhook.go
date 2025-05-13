@@ -118,16 +118,23 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			ServiceAccount: s.runnerServiceAccount,
 			Steps: []*cloudbuildpb.BuildStep{
 				{
-					Id:         "run",
-					Name:       "gcr.io/cloud-builders/docker",
-					Entrypoint: "bash",
-					Args: []string{
-						"-c",
-						// privileged and security-opts are needed to run Docker-in-Docker
-						// https://rootlesscontaine.rs/getting-started/common/apparmor/
-						"docker run --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -eENCODED_JIT_CONFIG=$_ENCODED_JIT_CONFIG $_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
+					Id:   "run",
+					Name: "$_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
+					Env: []string{
+						"ENCODED_JIT_CONFIG=${_ENCODED_JIT_CONFIG}",
 					},
 				},
+				// {
+				// 	Id:         "run",
+				// 	Name:       "gcr.io/cloud-builders/docker",
+				// 	Entrypoint: "bash",
+				// 	Args: []string{
+				// 		"-c",
+				// 		// privileged and security-opts are needed to run Docker-in-Docker
+				// 		// https://rootlesscontaine.rs/getting-started/common/apparmor/
+				// 		"docker run --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -eENCODED_JIT_CONFIG=$_ENCODED_JIT_CONFIG $_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
+				// 	},
+				// },
 			},
 			Options: &cloudbuildpb.BuildOptions{
 				Logging: cloudbuildpb.BuildOptions_CLOUD_LOGGING_ONLY,

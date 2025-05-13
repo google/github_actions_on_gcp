@@ -7,6 +7,12 @@ on:
     paths:
       - 'cmd/github-actions-on-gcp/**'
       - 'pkg/**'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'cmd/github-actions-on-gcp/**'
+      - 'pkg/**'
   workflow_dispatch:
 
 env:
