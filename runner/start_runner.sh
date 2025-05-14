@@ -15,11 +15,12 @@ else
 fi
 
 # Start the Docker daemon in the background using sudo.
+# overlay2 doesn't work in the Docker-in-Docker on GCB scenario.
 sudo sh -c "dockerd \
     --host=unix:///var/run/docker.sock \
     --host=tcp://0.0.0.0:2375 \
     --group=\"$DOCKER_SOCKET_GROUP\" \
-    --storage-driver=overlay2 \
+    --storage-driver=vfs \
     > /var/log/dockerd.log 2>&1" &
 
 # Wait for the Docker socket to be available and the daemon to be responsive
@@ -33,6 +34,7 @@ while true; do
     if [ ${ELAPSED_SECONDS} -ge ${TIMEOUT_SECONDS} ]; then
         echo "Timeout: Docker daemon did not become available after ${TIMEOUT_SECONDS} seconds."
         echo "Please check Docker daemon logs for errors: sudo cat /var/log/dockerd.log"
+        sudo cat /var/log/dockerd.log
         echo "Current status of ${DOCKER_SOCKET}:"
         sudo ls -l "${DOCKER_SOCKET}" || echo "Socket ${DOCKER_SOCKET} not found."
         echo "Unable to configure docker daemon, exiting."
@@ -49,7 +51,7 @@ while true; do
     fi
 
     # Progress indicator
-    echo -n "." 
+    echo -n "."
 
     sleep ${WAIT_INTERVAL_SECONDS}
     ELAPSED_SECONDS=$((ELAPSED_SECONDS + WAIT_INTERVAL_SECONDS))
