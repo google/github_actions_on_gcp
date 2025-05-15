@@ -14,9 +14,9 @@ on:
       - 'build_runner.yml'
       - 'build_webhook.yml'
     types:
-      - completed
+      - 'completed'
     branches:
-      - main
+      - 'main'
 
 jobs:
   simple-action-check:
