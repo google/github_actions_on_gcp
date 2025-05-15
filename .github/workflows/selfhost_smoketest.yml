@@ -25,11 +25,11 @@ jobs:
     runs-on: 'self-hosted'
     steps:
       - name: 'Checkout Repository'
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
       - name: 'Test GITHUB_WORKSPACE mount inside Docker'
-        id: mount-check
-        shell: bash
+        id: 'mount-check'
+        shell: 'bash'
         run: |
           echo "Host GITHUB_WORKSPACE is: $GITHUB_WORKSPACE"
           echo "Contents of GITHUB_WORKSPACE on host:"
@@ -45,7 +45,7 @@ jobs:
           cat docker_ls_output.txt
           echo "---------------------------------------------------------"
 
-          if grep -q ".git" docker_ls_output.txt; then
+          if grep -q "terrafrm" docker_ls_output.txt; then
             echo "::notice file=check-docker-volume-mount.yml::Docker volume mount appears to be working correctly."
             echo "status=PASSED" >> "$GITHUB_OUTPUT"
           else
@@ -55,7 +55,7 @@ jobs:
           fi
 
       - name: 'Report test result'
-        if: always() # Ensure this step runs even if the previous one fails
+        if: 'always()' # Ensure this step runs even if the previous one fails
         run: |
           echo "Docker volume mount test result: ${{ steps.mount-check.outputs.status }}"
           if [ "${{ steps.mount-check.outputs.status }}" == "FAILED" ]; then
