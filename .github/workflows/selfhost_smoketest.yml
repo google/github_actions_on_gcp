@@ -8,6 +8,15 @@ on:
     branches:
       - 'main'
   workflow_dispatch:
+  workflow_run:
+    # Run this workflow after either of the other build/deploys run.
+    workflows:
+      - 'build_runner.yml'
+      - 'build_webhook.yml'
+    types:
+      - completed
+    branches:
+      - main
 
 jobs:
   simple-action-check:
@@ -21,6 +30,7 @@ jobs:
           python-version: '3.12'
 
   check-docker-volume-mount:
+    # This test is to check Docker-in-Docker volume mounting. It's possible that the docker run command will succeed but not properly mount the files and workflows subsequently fail.
     name: 'Verify Docker-in-Docker volume mounts on the self-hosted runner'
     runs-on: 'self-hosted'
     steps:
@@ -45,22 +55,11 @@ jobs:
           cat docker_ls_output.txt
           echo "---------------------------------------------------------"
 
-          if grep -q "terrafrm" docker_ls_output.txt; then
+          if grep -q "terraform" docker_ls_output.txt; then
             echo "::notice file=check-docker-volume-mount.yml::Docker volume mount appears to be working correctly."
             echo "status=PASSED" >> "$GITHUB_OUTPUT"
           else
             echo "::error file=check-docker-volume-mount.yml::Docker volume mount failed or is empty."
             echo "status=FAILED" >> "$GITHUB_OUTPUT"
             exit 1 # Fail the step if the mount is empty
-          fi
-
-      - name: 'Report test result'
-        if: 'always()' # Ensure this step runs even if the previous one fails
-        run: |
-          echo "Docker volume mount test result: ${{ steps.mount-check.outputs.status }}"
-          if [ "${{ steps.mount-check.outputs.status }}" == "FAILED" ]; then
-            echo "::error::Docker volume mount test FAILED."
-            exit 1
-          else
-            echo "Docker volume mount test PASSED."
           fi
