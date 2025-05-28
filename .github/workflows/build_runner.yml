@@ -35,7 +35,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
-        uses: 'actions/checkout@v4'
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
@@ -58,7 +58,7 @@ jobs:
 
       - name: 'Build Docker image'
         id: 'push'
-        uses: 'docker/build-push-action@master'
+        uses: 'docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83' # ratchet:docker/build-push-action@v6
         with:
           context: './runner'
           file: './runner/Dockerfile'
