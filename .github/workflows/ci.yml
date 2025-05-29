@@ -15,20 +15,20 @@ concurrency:
 
 jobs:
   go_lint:
-    uses: 'abcxyz/pkg/.github/workflows/go-lint.yml@main' # ratchet:exclude
+    uses: 'abcxyz/actions/.github/workflows/go-lint.yml@main' # ratchet:exclude
     with:
       directory: 'pkg/'
 
   go_test:
-    uses: 'abcxyz/pkg/.github/workflows/go-test.yml@main' # ratchet:exclude
+    uses: 'abcxyz/actions/.github/workflows/go-test.yml@main' # ratchet:exclude
     with:
       directory: 'pkg/'
 
   yaml_lint:
-    uses: 'abcxyz/pkg/.github/workflows/yaml-lint.yml@main' # ratchet:exclude
+    uses: 'abcxyz/actions/.github/workflows/yaml-lint.yml@main' # ratchet:exclude
 
   terraform_lint:
-    uses: 'abcxyz/pkg/.github/workflows/terraform-lint.yml@main' # ratchet:exclude
+    uses: 'abcxyz/actions/.github/workflows/terraform-lint.yml@main' # ratchet:exclude
     with:
       directory: 'terraform/'
       terraform_version: '1.7.4'
