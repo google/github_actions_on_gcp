@@ -140,9 +140,9 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			},
 		}
 
-		if s.runnerWorkerPoolName != "" {
+		if s.runnerWorkerPoolID != "" {
 			build.Options.Pool = &cloudbuildpb.BuildOptions_PoolOption{
-				Name: fmt.Sprintf("projects/%s/locations/%s/workerPools/%s", s.runnerProjectID, s.runnerLocation, s.runnerWorkerPoolName),
+				Name: s.runnerWorkerPoolID,
 			}
 		}
 
