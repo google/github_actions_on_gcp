@@ -125,7 +125,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 						"-c",
 						// privileged and security-opts are needed to run Docker-in-Docker
 						// https://rootlesscontaine.rs/getting-started/common/apparmor/
-						"docker run --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -eENCODED_JIT_CONFIG=$_ENCODED_JIT_CONFIG $_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
+						"docker run --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -e ENCODED_JIT_CONFIG=$_ENCODED_JIT_CONFIG $_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
 					},
 				},
 			},
@@ -140,8 +140,14 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			},
 		}
 
+		if s.runnerWorkerPoolName != "" {
+			build.Options.Pool = &cloudbuildpb.BuildOptions_PoolOption{
+				Name: fmt.Sprintf("projects/%s/locations/%s/workerPools/%s", s.runnerProjectID, s.runnerLocation, s.runnerWorkerPoolName),
+			}
+		}
+
 		buildReq := &cloudbuildpb.CreateBuildRequest{
-			Parent:    fmt.Sprintf("projects/%s/locations/%s", s.runnerProjectID, s.buildLocation),
+			Parent:    fmt.Sprintf("projects/%s/locations/%s", s.runnerProjectID, s.runnerLocation),
 			ProjectId: s.runnerProjectID,
 			Build:     build,
 		}
