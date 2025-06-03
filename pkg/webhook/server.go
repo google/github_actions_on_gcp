@@ -45,7 +45,7 @@ type Server struct {
 	runnerImageTag       string
 	runnerRepositoryID   string
 	runnerServiceAccount string
-	runnerWorkerPoolName string
+	runnerWorkerPoolID   string
 	webhookSecret        []byte
 }
 
@@ -133,7 +133,7 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 		runnerProjectID:      cfg.RunnerProjectID,
 		runnerRepositoryID:   cfg.RunnerRepositoryID,
 		runnerServiceAccount: cfg.RunnerServiceAccount,
-		runnerWorkerPoolName: cfg.RunnerWorkerPoolName,
+		runnerWorkerPoolID:   cfg.RunnerWorkerPoolID,
 		webhookSecret:        webhookSecret,
 	}, nil
 }

@@ -38,7 +38,7 @@ type Config struct {
 	RunnerProjectID           string `env:"RUNNER_PROJECT_ID,required"`
 	RunnerRepositoryID        string `env:"RUNNER_REPOSITORY_ID,required"`
 	RunnerServiceAccount      string `env:"RUNNER_SERVICE_ACCOUNT,required"`
-	RunnerWorkerPoolName      string `env:"RUNNER_WORKER_POOL_NAME"`
+	RunnerWorkerPoolID        string `env:"RUNNER_WORKER_POOL_ID"`
 }
 
 // Validate validates the webhook config after load.
@@ -184,9 +184,9 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 
 	f.StringVar(&cli.StringVar{
 		Name:   "runner-worker-pool-id",
-		Target: &cfg.RunnerWorkerPoolName,
-		EnvVar: "RUNNER_WORKER_POOL_NAME",
-		Usage:  `The private runner worker pool name`,
+		Target: &cfg.RunnerWorkerPoolID,
+		EnvVar: "RUNNER_WORKER_POOL_ID",
+		Usage:  `The private runner worker pool ID`,
 	})
 
 	return set
