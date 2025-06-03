@@ -35,16 +35,17 @@ import (
 // Server provides the server implementation.
 type Server struct {
 	appClient            *githubauth.App
-	buildLocation        string
 	cbc                  CloudBuildClient
 	ghAPIBaseURL         string
 	h                    *renderer.Renderer
 	kmc                  KeyManagementClient
+	runnerLocation       string
 	runnerProjectID      string
 	runnerImageName      string
 	runnerImageTag       string
 	runnerRepositoryID   string
 	runnerServiceAccount string
+	runnerWorkerPoolName string
 	webhookSecret        []byte
 }
 
@@ -122,16 +123,17 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 
 	return &Server{
 		appClient:            appClient,
-		buildLocation:        cfg.BuildLocation,
 		cbc:                  cbc,
 		ghAPIBaseURL:         cfg.GitHubAPIBaseURL,
 		h:                    h,
 		kmc:                  kmc,
+		runnerLocation:       cfg.RunnerLocation,
 		runnerImageName:      cfg.RunnerImageName,
 		runnerImageTag:       cfg.RunnerImageTag,
 		runnerProjectID:      cfg.RunnerProjectID,
 		runnerRepositoryID:   cfg.RunnerRepositoryID,
 		runnerServiceAccount: cfg.RunnerServiceAccount,
+		runnerWorkerPoolName: cfg.RunnerWorkerPoolName,
 		webhookSecret:        webhookSecret,
 	}, nil
 }

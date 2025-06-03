@@ -48,29 +48,24 @@ func TestWebhookServerCommand(t *testing.T) {
 			expErr: `unexpected arguments: ["foo"]`,
 		},
 		{
-			name:   "invalid_config_build_location",
-			env:    map[string]string{},
-			expErr: `BUILD_LOCATION is required`,
-		},
-		{
 			name: "invalid_config_github_app_id",
-			env: map[string]string{
-				"BUILD_LOCATION": "build-location",
-			},
+
+			env: map[string]string{},
+
 			expErr: `GITHUB_APP_ID is required`,
 		},
 		{
 			name: "invalid_config_webhook_key_mount_path",
 			env: map[string]string{
-				"BUILD_LOCATION": "build-location",
-				"GITHUB_APP_ID":  "github-app-id",
+				"RUNNER_LOCATION": "runner-location",
+				"GITHUB_APP_ID":   "github-app-id",
 			},
 			expErr: `WEBHOOK_KEY_MOUNT_PATH is required`,
 		},
 		{
 			name: "invalid_config_webhook_key_name",
 			env: map[string]string{
-				"BUILD_LOCATION":         "build-location",
+				"RUNNER_LOCATION":        "runner-location",
 				"GITHUB_APP_ID":          "github-app-id",
 				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
 			},
@@ -79,7 +74,7 @@ func TestWebhookServerCommand(t *testing.T) {
 		{
 			name: "invalid_config_kms_app_private_key_id",
 			env: map[string]string{
-				"BUILD_LOCATION":         "build-location",
+				"RUNNER_LOCATION":        "runner-location",
 				"GITHUB_APP_ID":          "github-app-id",
 				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
 				"WEBHOOK_KEY_NAME":       "key-name",
@@ -87,9 +82,19 @@ func TestWebhookServerCommand(t *testing.T) {
 			expErr: `KMS_APP_PRIVATE_KEY_ID is required`,
 		},
 		{
+			name: "invalid_config_runner_location",
+			env: map[string]string{
+				"GITHUB_APP_ID":          "github-app-id",
+				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
+				"WEBHOOK_KEY_NAME":       "key-name",
+				"KMS_APP_PRIVATE_KEY_ID": "kms-app-private-key-id",
+			},
+			expErr: `RUNNER_LOCATION is required`,
+		},
+		{
 			name: "invalid_config_runner_project_id",
 			env: map[string]string{
-				"BUILD_LOCATION":         "build-location",
+				"RUNNER_LOCATION":        "runner-location",
 				"GITHUB_APP_ID":          "github-app-id",
 				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
 				"WEBHOOK_KEY_NAME":       "key-name",
@@ -100,7 +105,7 @@ func TestWebhookServerCommand(t *testing.T) {
 		{
 			name: "invalid_runner_repository_id",
 			env: map[string]string{
-				"BUILD_LOCATION":         "build-location",
+				"RUNNER_LOCATION":        "runner-location",
 				"GITHUB_APP_ID":          "github-app-id",
 				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
 				"WEBHOOK_KEY_NAME":       "key-name",
@@ -112,7 +117,7 @@ func TestWebhookServerCommand(t *testing.T) {
 		{
 			name: "invalid_config_runner_service_account",
 			env: map[string]string{
-				"BUILD_LOCATION":         "build-location",
+				"RUNNER_LOCATION":        "runner-location",
 				"GITHUB_APP_ID":          "github-app-id",
 				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
 				"WEBHOOK_KEY_NAME":       "key-name",
@@ -125,7 +130,7 @@ func TestWebhookServerCommand(t *testing.T) {
 		{
 			name: "happy_path",
 			env: map[string]string{
-				"BUILD_LOCATION":         "build-location",
+				"RUNNER_LOCATION":        "runner-location",
 				"GITHUB_APP_ID":          "github-app-id",
 				"WEBHOOK_KEY_MOUNT_PATH": "github-webhook-key-mount-path",
 				"WEBHOOK_KEY_NAME":       "key-name",

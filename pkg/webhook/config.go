@@ -26,7 +26,6 @@ import (
 // Config defines the set of environment variables required
 // for running the webhook service.
 type Config struct {
-	BuildLocation             string `env:"BUILD_LOCATION,required"`
 	GitHubAPIBaseURL          string `env:"GITHUB_API_BASE_URL,default=https://api.github.com"`
 	GitHubAppID               string `env:"GITHUB_APP_ID,required"`
 	GitHubWebhookKeyMountPath string `env:"WEBHOOK_KEY_MOUNT_PATH,required"`
@@ -35,17 +34,15 @@ type Config struct {
 	Port                      string `env:"PORT,default=8080"`
 	RunnerImageName           string `env:"RUNNER_IMAGE_NAME,default=default-runner"`
 	RunnerImageTag            string `env:"RUNNER_IMAGE_TAG,default=latest"`
+	RunnerLocation            string `env:"RUNNER_LOCATION,required"`
 	RunnerProjectID           string `env:"RUNNER_PROJECT_ID,required"`
 	RunnerRepositoryID        string `env:"RUNNER_REPOSITORY_ID,required"`
 	RunnerServiceAccount      string `env:"RUNNER_SERVICE_ACCOUNT,required"`
+	RunnerWorkerPoolName      string `env:"RUNNER_WORKER_POOL_NAME"`
 }
 
 // Validate validates the webhook config after load.
 func (cfg *Config) Validate() error {
-	if cfg.BuildLocation == "" {
-		return fmt.Errorf("BUILD_LOCATION is required")
-	}
-
 	if cfg.GitHubAppID == "" {
 		return fmt.Errorf("GITHUB_APP_ID is required")
 	}
@@ -60,6 +57,10 @@ func (cfg *Config) Validate() error {
 
 	if cfg.KMSAppPrivateKeyID == "" {
 		return fmt.Errorf("KMS_APP_PRIVATE_KEY_ID is required")
+	}
+
+	if cfg.RunnerLocation == "" {
+		return fmt.Errorf("RUNNER_LOCATION is required")
 	}
 
 	if cfg.RunnerProjectID == "" {
@@ -95,10 +96,10 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 	f := set.NewSection("COMMON SERVER OPTIONS")
 
 	f.StringVar(&cli.StringVar{
-		Name:   "build-location",
-		Target: &cfg.BuildLocation,
-		EnvVar: "BUILD_LOCATION",
-		Usage:  `The location used for the cloud build build.`,
+		Name:   "runner-location",
+		Target: &cfg.RunnerLocation,
+		EnvVar: "RUNNER_LOCATION",
+		Usage:  `The location used for the Cloud Build build.`,
 	})
 
 	f.StringVar(&cli.StringVar{
@@ -179,6 +180,13 @@ func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 		Target: &cfg.RunnerServiceAccount,
 		EnvVar: "RUNNER_SERVICE_ACCOUNT",
 		Usage:  `The service account the runner should execute as`,
+	})
+
+	f.StringVar(&cli.StringVar{
+		Name:   "runner-worker-pool-id",
+		Target: &cfg.RunnerWorkerPoolName,
+		EnvVar: "RUNNER_WORKER_POOL_NAME",
+		Usage:  `The private runner worker pool name`,
 	})
 
 	return set
