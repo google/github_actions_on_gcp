@@ -13,7 +13,7 @@ command without storing to variable to see output."
 # Generate JIT Config
 JIT_CONFIG="$(go run ./cmd/generate-jit \
 -app-id #YOUR_APP_ID_GOES_HERE \
--private-key /tmp/gh_key.pem \
+-private-key #PATH_TO_PEM_FILE \
 -org #YOUR_ORG_NAME_GOES_HERE \
 -runner-name "${RUNNER_NAME}" \
 -runner-group-id 1 \
