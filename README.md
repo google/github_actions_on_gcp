@@ -53,7 +53,7 @@ https://github.com/organizations/${YOUR_ORG}/settings/profile
 
 Now that the GitHub App exists, it needs to be added to your org.
 
-1. Navigate to Org setting page https://github.com/organizations/pdewilde-test-g34x2/settings/profile
+1. Navigate to Org setting page https://github.com/organizations/${YOUR_ORG}/settings/profile
 2. Expand Developer settings (last option on left sidebar) and click GitHub Apps.
 3. Select Your App
 4. On the left bar, select "Install App"
