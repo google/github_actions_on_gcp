@@ -39,8 +39,8 @@ resource "google_project_service" "default" {
 resource "google_service_account" "run_service_account" {
   project = var.project_id
 
-  account_id   = "${var.name}-sa"
-  display_name = "${var.name}-sa Cloud Run Service Account"
+  account_id   = "${var.name}-webhook-sa"
+  display_name = "${var.name}-webhook-sa Cloud Run Service Account"
 }
 
 resource "google_kms_key_ring" "webhook_keyring" {
