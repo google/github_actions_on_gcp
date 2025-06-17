@@ -46,8 +46,6 @@ resource "google_project_iam_member" "build_trigger_permission" {
 
   role   = "roles/cloudbuild.builds.editor"
   member = google_service_account.run_service_account.member
-
-  depends_on = [google_service_account.run_service_account]
 }
 
 # Allow the webhook project to run as the runner service account
@@ -55,6 +53,4 @@ resource "google_service_account_iam_member" "build_runner_permission" {
   service_account_id = google_service_account.runner_sa.name
   role               = "roles/iam.serviceAccountUser"
   member             = google_service_account.run_service_account.member
-
-  depends_on = [google_service_account.run_service_account]
 }
