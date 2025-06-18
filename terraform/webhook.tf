@@ -128,6 +128,8 @@ module "cloud_run" {
     var.envvars,
     {
       "KMS_APP_PRIVATE_KEY_ID" : format("%s/cryptoKeyVersions/%s", google_kms_crypto_key.webhook_app_private_key.id, var.kms_key_version)
+      "RUNNER_PROJECT_ID" : var.runner_project_ids[0]
+      "RUNNER_SERVICE_ACCOUNT" : google_service_account.runner_sa
     }
   )
 
@@ -138,8 +140,6 @@ module "cloud_run" {
       name : "webhook-secret-file",
       version : "latest",
     }
-    "RUNNER_PROJECT_ID" : var.runner_project_ids[0]
-    "RUNNER_SERVICE_ACCOUNT" : google_service_account.runner_sa
   }
 }
 
