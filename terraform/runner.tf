@@ -35,7 +35,7 @@ resource "google_project_service" "runner" {
   disable_dependent_services = false
 }
 
-resource "google_service_account" "runner_sa" {
+resource "google_service_account" "runner_service_accounts" {
   for_each = toset(var.runner_project_ids)
 
   project = each.key
@@ -51,7 +51,7 @@ resource "google_project_iam_member" "write_logs_permission" {
   project = each.key
 
   role   = "roles/logging.logWriter"
-  member = google_service_account.runner_sa[each.key].member
+  member = google_service_account.runner_service_accounts[each.key].member
 }
 
 # Allow the webhook project to call CreateBuild to kick off the runner
@@ -66,7 +66,7 @@ resource "google_project_iam_member" "build_trigger_permission" {
 
 # Allow the webhook project to run as the runner service account
 resource "google_service_account_iam_member" "build_runner_permission" {
-  for_each = google_service_account.runner_sa
+  for_each = google_service_account.runner_service_accounts
 
   service_account_id = each.value.name
 
