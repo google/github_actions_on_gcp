@@ -150,10 +150,10 @@ variable "kms_key_version" {
 
 variable "runner_project_id" {
   description = "The project ID to be used as a runner."
-  type        = string
+  type        = list(string)
 
   validation {
-    condition     = var.runner_project_id != ""
-    error_message = "A runner project must be specified."
+    condition     = length(var.runner_project_id) == 1 && var.runner_project_id[0] != ""
+    error_message = "Exactly one runner project must be specified."
   }
 }
