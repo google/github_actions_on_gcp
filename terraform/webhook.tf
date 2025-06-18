@@ -138,6 +138,8 @@ module "cloud_run" {
       name : "webhook-secret-file",
       version : "latest",
     }
+    "RUNNER_PROJECT_ID" : var.runner_project_id
+    "RUNNER_SERVICE_ACCOUNT" : google_service_account.runner_sa
   }
 }
 
