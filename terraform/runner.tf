@@ -49,8 +49,9 @@ resource "google_project_iam_member" "write_logs_permission" {
   for_each = toset(var.runner_project_ids)
 
   project = each.key
-  role    = "roles/logging.logWriter"
-  member  = google_service_account.runner_sa[each.key].member
+
+  role   = "roles/logging.logWriter"
+  member = google_service_account.runner_sa[each.key].member
 }
 
 # Allow the webhook project to call CreateBuild to kick off the runner
