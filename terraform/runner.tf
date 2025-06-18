@@ -12,21 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource "google_project_service" "runner" {
-  for_each = toset([
+locals {
+  runner_services = toset([
     "cloudbuild.googleapis.com",
     "logging.googleapis.com",
   ])
+}
 
-  project = var.runner_project_id
+resource "google_project_service" "runner" {
+  for_each = {
+    for pair in setproduct(var.runner_project_ids, local.runner_services) :
+    "${pair[0]}-${pair[1]}" => {
+      project_id = pair[0]
+      service    = pair[1]
+    }
+  }
 
-  service                    = each.value
+  project = each.value.project_id
+
+  service                    = each.value.service
   disable_on_destroy         = false
   disable_dependent_services = false
 }
 
 resource "google_service_account" "runner_sa" {
-  project = var.runner_project_id
+  for_each = toset(var.runner_project_ids)
+  project  = each.key
 
   account_id   = "${var.name}-runner-sa"
   display_name = "${var.name}-runner-sa Cloud Build Service Account"
@@ -34,15 +45,17 @@ resource "google_service_account" "runner_sa" {
 
 # Allow the runner service account to write logs
 resource "google_project_iam_member" "write_logs_permission" {
-  project = var.runner_project_id
+  for_each = toset(var.runner_project_ids)
+  project  = each.key
 
   role   = "roles/logging.logWriter"
-  member = google_service_account.runner_sa.member
+  member = google_service_account.runner_sa[each.key].member
 }
 
 # Allow the webhook project to call CreateBuild to kick off the runner
 resource "google_project_iam_member" "build_trigger_permission" {
-  project = var.runner_project_id
+  for_each = toset(var.runner_project_ids)
+  project  = each.key
 
   role   = "roles/cloudbuild.builds.editor"
   member = google_service_account.run_service_account.member
@@ -50,7 +63,9 @@ resource "google_project_iam_member" "build_trigger_permission" {
 
 # Allow the webhook project to run as the runner service account
 resource "google_service_account_iam_member" "build_runner_permission" {
-  service_account_id = google_service_account.runner_sa.name
+  for_each = google_service_account.runner_sa
+
+  service_account_id = each.value.name
   role               = "roles/iam.serviceAccountUser"
   member             = google_service_account.run_service_account.member
 }
