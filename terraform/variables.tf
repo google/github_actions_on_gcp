@@ -148,12 +148,12 @@ variable "kms_key_version" {
   }
 }
 
-variable "runner_project_id" {
-  description = "The project ID to be used as a runner."
+variable "runner_project_ids" {
+  description = "The project IDs to be used as a runner."
   type        = list(string)
 
   validation {
-    condition     = length(var.runner_project_id) == 1 && var.runner_project_id[0] != ""
+    condition     = length(var.runner_project_ids) == 1 && var.runner_project_ids[0] != ""
     error_message = "Exactly one runner project must be specified."
   }
 }
