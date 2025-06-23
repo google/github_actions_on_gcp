@@ -20,7 +20,7 @@ variable "project_id" {
 variable "name" {
   description = "The name of this component."
   type        = string
-  default     = "github-actions-on-gcp"
+  default     = "action-dispatcher"
   validation {
     condition     = can(regex("^[A-Za-z][0-9A-Za-z-]+[0-9A-Za-z]$", var.name))
     error_message = "Name can only contain letters, numbers, hyphens(-) and must start with letter."
@@ -145,5 +145,15 @@ variable "kms_key_version" {
   validation {
     condition     = can(regex("^\\d+$", var.kms_key_version))
     error_message = "The KMS key version must be a positive integer."
+  }
+}
+
+variable "runner_project_ids" {
+  description = "The project IDs to be used as a runner."
+  type        = list(string)
+
+  validation {
+    condition     = length(var.runner_project_ids) == 1 && var.runner_project_ids[0] != ""
+    error_message = "Exactly one runner project must be specified."
   }
 }

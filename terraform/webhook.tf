@@ -39,8 +39,8 @@ resource "google_project_service" "default" {
 resource "google_service_account" "run_service_account" {
   project = var.project_id
 
-  account_id   = "${var.name}-sa"
-  display_name = "${var.name}-sa Cloud Run Service Account"
+  account_id   = "${var.name}-webhook-sa"
+  display_name = "${var.name}-webhook-sa Cloud Run Service Account"
 }
 
 resource "google_kms_key_ring" "webhook_keyring" {
@@ -128,6 +128,8 @@ module "cloud_run" {
     var.envvars,
     {
       "KMS_APP_PRIVATE_KEY_ID" : format("%s/cryptoKeyVersions/%s", google_kms_crypto_key.webhook_app_private_key.id, var.kms_key_version)
+      "RUNNER_PROJECT_ID" : var.runner_project_ids[0]
+      "RUNNER_SERVICE_ACCOUNT" : one(values(google_service_account.runner_service_accounts)).email
     }
   )
 
