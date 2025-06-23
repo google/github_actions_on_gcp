@@ -15,18 +15,13 @@
 package webhook
 
 import (
+	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 	"fmt"
+	"github.com/abcxyz/pkg/logging"
+	"github.com/google/go-github/v69/github"
 	"html"
 	"net/http"
-	"net/url"
 	"slices"
-	"strconv"
-
-	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
-	"github.com/abcxyz/pkg/logging"
-	"golang.org/x/oauth2"
-
-	"github.com/google/go-github/v69/github"
 )
 
 var (
@@ -86,32 +81,9 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			return &apiResponse{http.StatusOK, fmt.Sprintf("no action taken for labels: %s", event.WorkflowJob.Labels), nil}
 		}
 
-		installation, err := s.appClient.InstallationForID(ctx, strconv.FormatInt(*event.Installation.ID, 10))
-		if err != nil {
-			return &apiResponse{http.StatusInternalServerError, "failed to setup installation client", err}
-		}
-
-		httpClient := oauth2.NewClient(ctx, (*installation).AllReposOAuth2TokenSource(ctx, map[string]string{
-			"administration": "write",
-		}))
-
-		gh := github.NewClient(httpClient)
-		baseURL, err := url.Parse(fmt.Sprintf("%s/", s.ghAPIBaseURL))
-		if err != nil {
-			return &apiResponse{http.StatusInternalServerError, "failed to set github base URL", err}
-		}
-		gh.BaseURL = baseURL
-		gh.UploadURL = baseURL
-
-		// Note that even though event.WorkflowJob.RunID is used for a dynamic string, it's not
-		// guaranteed that particular job will run on this specific runner.
-		jitconfig, _, err := gh.Actions.GenerateRepoJITConfig(ctx, *event.Org.Login, *event.Repo.Name, &github.GenerateJITConfigRequest{
-			Name:          fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID),
-			RunnerGroupID: 1,
-			Labels:        []string{defaultRunnerLabel, "Linux", "X64"},
-		})
-		if err != nil {
-			return &apiResponse{http.StatusInternalServerError, "failed to generate jitconfig", err}
+		jitConfig, errResponse := s.GenerateRepoJITConfig(ctx, *event.Installation.ID, *event.Org.Login, *event.Repo.Name, *event.WorkflowJob.RunID)
+		if errResponse != nil {
+			return errResponse
 		}
 
 		build := &cloudbuildpb.Build{
@@ -133,7 +105,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 				Logging: cloudbuildpb.BuildOptions_CLOUD_LOGGING_ONLY,
 			},
 			Substitutions: map[string]string{
-				"_ENCODED_JIT_CONFIG": *jitconfig.EncodedJITConfig,
+				"_ENCODED_JIT_CONFIG": *jitConfig.EncodedJITConfig,
 				"_REPOSITORY_ID":      s.runnerRepositoryID,
 				"_IMAGE_NAME":         s.runnerImageName,
 				"_IMAGE_TAG":          s.runnerImageTag,
