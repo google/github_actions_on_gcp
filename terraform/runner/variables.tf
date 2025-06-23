@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-module "runner" {
-  for_each = toset(var.runner_project_ids)
+variable "project_id" {
+  description = "The project ID to deploy the runner resources to."
+  type        = string
+}
 
-  source = "./runner"
+variable "name" {
+  description = "The name of the runner."
+  type        = string
+}
 
-  project_id               = each.key
-  name                     = var.name
-  run_service_account_member = google_service_account.run_service_account.member
+variable "run_service_account_member" {
+  description = "The service account member from the webhook module."
+  type        = string
 }
