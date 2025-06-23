@@ -26,11 +26,11 @@ import (
 	"github.com/google/go-github/v69/github"
 )
 
-func (s *Server) GenerateRepoJITConfig(ctx context.Context, installationID int64, org, repo string, runnerName string) (*github.JITRunnerConfig, *apiResponse) {
+func (s *Server) GenerateRepoJITConfig(ctx context.Context, installationID int64, org, repo, runnerName string) (*github.JITRunnerConfig, *apiResponse) {
 	return s.generateJITConfig(ctx, installationID, org, &repo, runnerName)
 }
 
-func (s *Server) GenerateOrgJITConfig(ctx context.Context, installationID int64, org string, runnerName string) (*github.JITRunnerConfig, *apiResponse) {
+func (s *Server) GenerateOrgJITConfig(ctx context.Context, installationID int64, org, runnerName string) (*github.JITRunnerConfig, *apiResponse) {
 	return s.generateJITConfig(ctx, installationID, org, nil, runnerName)
 }
 
