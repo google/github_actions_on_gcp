@@ -15,13 +15,15 @@
 package webhook
 
 import (
-	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 	"fmt"
-	"github.com/abcxyz/pkg/logging"
-	"github.com/google/go-github/v69/github"
 	"html"
 	"net/http"
 	"slices"
+
+	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
+
+	"github.com/abcxyz/pkg/logging"
+	"github.com/google/go-github/v69/github"
 )
 
 var (
