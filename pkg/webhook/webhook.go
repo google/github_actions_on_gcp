@@ -83,7 +83,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			return &apiResponse{http.StatusOK, fmt.Sprintf("no action taken for labels: %s", event.WorkflowJob.Labels), nil}
 		}
 
-		jitConfig, errResponse := s.GenerateRepoJITConfig(ctx, *event.Installation.ID, *event.Org.Login, *event.Repo.Name, *event.WorkflowJob.RunID)
+		jitConfig, errResponse := s.GenerateRepoJITConfig(ctx, *event.Installation.ID, *event.Org.Login, *event.Repo.Name, fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID))
 		if errResponse != nil {
 			return errResponse
 		}
