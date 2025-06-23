@@ -17,7 +17,8 @@ module "runner" {
 
   source = "./runner"
 
-  project_id               = each.key
-  name                     = var.name
+  project_id = each.key
+
+  name                       = var.name
   run_service_account_member = google_service_account.run_service_account.member
 }
