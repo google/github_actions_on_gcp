@@ -12,13 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-module "runner" {
-  for_each = toset(var.runner_project_ids)
-
-  source = "./runner"
-
-  project_id = each.key
-
-  name                       = var.name
-  run_service_account_member = google_service_account.run_service_account.member
+output "runner_service_account" {
+  description = "The runner service account."
+  value       = google_service_account.runner_service_account
 }
