@@ -74,65 +74,83 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 
 	switch event := event.(type) {
 	case *github.WorkflowJobEvent:
-		if event.Action == nil || *event.Action != "queued" {
+		// Check for nil action first to avoid nil pointer dereference
+		if event.Action == nil {
+			logger.InfoContext(ctx, "no action taken for nil action type")
+			return &apiResponse{http.StatusOK, "no action taken for nil action type", nil}
+		}
+
+		runnerID := fmt.Sprintf("GCP-%d", *event.WorkflowJob.RunID)
+
+		switch *event.Action {
+		case "queued":
+			logger.InfoContext(ctx, "Workflow job queued", "runner_id", runnerID)
+
+			if !slices.Contains(event.WorkflowJob.Labels, defaultRunnerLabel) {
+				logger.InfoContext(ctx, "no action taken for labels", "labels", event.WorkflowJob.Labels)
+				return &apiResponse{http.StatusOK, fmt.Sprintf("no action taken for labels: %s", event.WorkflowJob.Labels), nil}
+			}
+
+			jitConfig, errResponse := s.GenerateRepoJITConfig(ctx, *event.Installation.ID, *event.Org.Login, *event.Repo.Name, runnerID)
+			if errResponse != nil {
+				return errResponse
+			}
+
+			build := &cloudbuildpb.Build{
+				ServiceAccount: s.runnerServiceAccount,
+				Steps: []*cloudbuildpb.BuildStep{
+					{
+						Id:         "run",
+						Name:       "gcr.io/cloud-builders/docker",
+						Entrypoint: "bash",
+						Args: []string{
+							"-c",
+							// privileged and security-opts are needed to run Docker-in-Docker
+							// https://rootlesscontaine.rs/getting-started/common/apparmor/
+							"docker run --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -e ENCODED_JIT_CONFIG=$_ENCODED_JIT_CONFIG $_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
+						},
+					},
+				},
+				Options: &cloudbuildpb.BuildOptions{
+					Logging: cloudbuildpb.BuildOptions_CLOUD_LOGGING_ONLY,
+				},
+				Substitutions: map[string]string{
+					"_ENCODED_JIT_CONFIG": *jitConfig.EncodedJITConfig,
+					"_REPOSITORY_ID":      s.runnerRepositoryID,
+					"_IMAGE_NAME":         s.runnerImageName,
+					"_IMAGE_TAG":          s.runnerImageTag,
+				},
+			}
+
+			if s.runnerWorkerPoolID != "" {
+				build.Options.Pool = &cloudbuildpb.BuildOptions_PoolOption{
+					Name: s.runnerWorkerPoolID,
+				}
+			}
+
+			buildReq := &cloudbuildpb.CreateBuildRequest{
+				Parent:    fmt.Sprintf("projects/%s/locations/%s", s.runnerProjectID, s.runnerLocation),
+				ProjectId: s.runnerProjectID,
+				Build:     build,
+			}
+
+			if err := s.cbc.CreateBuild(ctx, buildReq); err != nil {
+				return &apiResponse{http.StatusInternalServerError, "failed to run build", err}
+			}
+
+			logger.InfoContext(ctx, runnerStartedMsg, "runner_id", runnerID)
+			return &apiResponse{http.StatusOK, runnerStartedMsg, nil}
+
+		default:
+			// Log other unhandled workflow job actions
+			logger.InfoContext(ctx, "no action taken for unhandled workflow job action type", "action", *event.Action)
 			return &apiResponse{http.StatusOK, fmt.Sprintf("no action taken for action type: %q", *event.Action), nil}
 		}
 
-		if !slices.Contains(event.WorkflowJob.Labels, defaultRunnerLabel) {
-			logger.InfoContext(ctx, "no action taken for labels", "labels", event.WorkflowJob.Labels)
-			return &apiResponse{http.StatusOK, fmt.Sprintf("no action taken for labels: %s", event.WorkflowJob.Labels), nil}
-		}
-
-		jitConfig, errResponse := s.GenerateRepoJITConfig(ctx, *event.Installation.ID, *event.Org.Login, *event.Repo.Name, fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID))
-		if errResponse != nil {
-			return errResponse
-		}
-
-		build := &cloudbuildpb.Build{
-			ServiceAccount: s.runnerServiceAccount,
-			Steps: []*cloudbuildpb.BuildStep{
-				{
-					Id:         "run",
-					Name:       "gcr.io/cloud-builders/docker",
-					Entrypoint: "bash",
-					Args: []string{
-						"-c",
-						// privileged and security-opts are needed to run Docker-in-Docker
-						// https://rootlesscontaine.rs/getting-started/common/apparmor/
-						"docker run --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -e ENCODED_JIT_CONFIG=$_ENCODED_JIT_CONFIG $_REPOSITORY_ID/$_IMAGE_NAME:$_IMAGE_TAG",
-					},
-				},
-			},
-			Options: &cloudbuildpb.BuildOptions{
-				Logging: cloudbuildpb.BuildOptions_CLOUD_LOGGING_ONLY,
-			},
-			Substitutions: map[string]string{
-				"_ENCODED_JIT_CONFIG": *jitConfig.EncodedJITConfig,
-				"_REPOSITORY_ID":      s.runnerRepositoryID,
-				"_IMAGE_NAME":         s.runnerImageName,
-				"_IMAGE_TAG":          s.runnerImageTag,
-			},
-		}
-
-		if s.runnerWorkerPoolID != "" {
-			build.Options.Pool = &cloudbuildpb.BuildOptions_PoolOption{
-				Name: s.runnerWorkerPoolID,
-			}
-		}
-
-		buildReq := &cloudbuildpb.CreateBuildRequest{
-			Parent:    fmt.Sprintf("projects/%s/locations/%s", s.runnerProjectID, s.runnerLocation),
-			ProjectId: s.runnerProjectID,
-			Build:     build,
-		}
-
-		if err := s.cbc.CreateBuild(ctx, buildReq); err != nil {
-			return &apiResponse{http.StatusInternalServerError, "failed to run build", err}
-		}
-
-		logger.InfoContext(ctx, runnerStartedMsg, "runner_id", fmt.Sprintf("GCP-%d", event.WorkflowJob.RunID))
-		return &apiResponse{http.StatusOK, runnerStartedMsg, nil}
+	default:
+		// Log other unhandled webhook event types
+		logger.ErrorContext(ctx, "Received unhandled event type", "event_type", fmt.Sprintf("%T", event))
+		return &apiResponse{http.StatusInternalServerError, "unexpected event type dispatched from webhook", fmt.Errorf("event type: %s", event)}
 	}
 
-	return &apiResponse{http.StatusInternalServerError, "unexpected event type dispatched from webhook", fmt.Errorf("event type: %s", event)}
 }
