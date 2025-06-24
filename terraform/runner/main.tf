@@ -12,15 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-locals {
-  runner_services = toset([
+resource "google_project_service" "runner" {
+  for_each = toset([
     "cloudbuild.googleapis.com",
     "logging.googleapis.com",
   ])
-}
-
-resource "google_project_service" "runner" {
-  for_each = local.runner_services
 
   project = var.project_id
 
