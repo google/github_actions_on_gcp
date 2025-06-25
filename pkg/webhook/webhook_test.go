@@ -27,6 +27,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	cloudbuild "cloud.google.com/go/cloudbuild/apiv1/v2"
 	"github.com/abcxyz/pkg/githubauth"
@@ -46,23 +47,97 @@ const (
 func TestHandleWebhook(t *testing.T) {
 	t.Parallel()
 
+	now := time.Now().UTC()
+	queuedTime := github.Timestamp{Time: now.Add(-15 * time.Minute)}
+	inProgressTime := github.Timestamp{Time: now.Add(-10 * time.Minute)}
+	completedTime := github.Timestamp{Time: now.Add(-5 * time.Minute)}
+	runID := int64(456)
+	jobID := int64(789)
+	jobName := "build-job"
+
+	queuedAction := "queued"
+	contentType := "application/json"
+	payloadType := "workflow_job"
+
 	cases := []struct {
 		name                 string
 		payloadType          string
 		action               string
+		runnerLabels         []string
 		payloadWebhookSecret string
 		contentType          string
+		createdAt            *github.Timestamp
+		startedAt            *github.Timestamp
+		completedAt          *github.Timestamp
+		runID                *int64
+		jobID                *int64
+		jobName              *string
 		expStatusCode        int
 		expRespBody          string
 	}{
 		{
-			name:                 "Foo",
-			payloadType:          "workflow_job",
-			action:               "queued",
+			name:                 "Workflow Job Queued - Default Label",
+			payloadType:          payloadType,
+			action:               queuedAction,
+			runnerLabels:         []string{defaultRunnerLabel},
 			payloadWebhookSecret: serverGitHubWebhookSecret,
-			contentType:          "application/json",
+			contentType:          contentType,
+			createdAt:            &queuedTime,
+			startedAt:            nil,
+			completedAt:          nil,
+			runID:                &runID,
+			jobID:                &jobID,
+			jobName:              &jobName,
 			expStatusCode:        200,
 			expRespBody:          runnerStartedMsg,
+		},
+		{
+			name:                 "Workflow Job Queued - No Matching Label",
+			payloadType:          payloadType,
+			action:               queuedAction,
+			runnerLabels:         []string{"other-label"}, // No defaultRunnerLabel
+			payloadWebhookSecret: serverGitHubWebhookSecret,
+			contentType:          contentType,
+			createdAt:            &queuedTime,
+			startedAt:            nil,
+			completedAt:          nil,
+			runID:                &runID,
+			jobID:                &jobID,
+			jobName:              &jobName,
+			expStatusCode:        200,
+			expRespBody:          fmt.Sprintf("no action taken for labels: %s", []string{"other-label"}),
+		},
+		{
+			name:                 "Workflow Job In Progress",
+			payloadType:          payloadType,
+			action:               "in_progress",
+			runnerLabels:         []string{defaultRunnerLabel},
+			payloadWebhookSecret: serverGitHubWebhookSecret,
+			contentType:          contentType,
+			createdAt:            &queuedTime,
+			startedAt:            &inProgressTime,
+			completedAt:          nil,
+			runID:                &runID,
+			jobID:                &jobID,
+			jobName:              &jobName,
+			expStatusCode:        200,
+			expRespBody:          "workflow job in progress event logged",
+		},
+		{
+			name:                 "Workflow Job Completed - Success",
+			payloadType:          payloadType,
+			action:               "completed",
+			runnerLabels:         []string{defaultRunnerLabel},
+			payloadWebhookSecret: serverGitHubWebhookSecret,
+			contentType:          contentType,
+			createdAt:            &queuedTime,
+			startedAt:            &inProgressTime,
+			completedAt:          &completedTime,
+			runID:                &runID,
+			jobID:                &jobID,
+			jobName:              &jobName,
+			expStatusCode:        200,
+			expRespBody:          "workflow job completed event logged",
 		},
 	}
 
@@ -76,7 +151,13 @@ func TestHandleWebhook(t *testing.T) {
 			event := &github.WorkflowJobEvent{
 				Action: &tc.action,
 				WorkflowJob: &github.WorkflowJob{
-					Labels: []string{defaultRunnerLabel},
+					Labels:      tc.runnerLabels,
+					CreatedAt:   tc.createdAt,
+					StartedAt:   tc.startedAt,
+					CompletedAt: tc.completedAt,
+					RunID:       tc.runID,
+					ID:          tc.jobID,
+					Name:        tc.jobName,
 				},
 				Installation: &github.Installation{
 					ID: &installationID,
