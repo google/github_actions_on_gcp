@@ -87,9 +87,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			jobID = fmt.Sprintf("%d", *event.WorkflowJob.ID)
 		}
 
-		// runnerID is from the RunID, which is a different concept
-		// It's specific to your runner provisioning logic.
-		runnerID := fmt.Sprintf("GCP-%d", *event.WorkflowJob.RunID)
+		runnerID := fmt.Sprintf("GCP-%s", jobID)
 
 		// Base log fields that will be common to most WorkflowJob logs
 		baseLogFields := []any{
