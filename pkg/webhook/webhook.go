@@ -17,6 +17,7 @@ package webhook
 import (
 	"fmt"
 	"html"
+	"log/slog"
 	"net/http"
 	"slices"
 	"time"
@@ -28,8 +29,9 @@ import (
 )
 
 var (
-	defaultRunnerLabel = "self-hosted"
-	runnerStartedMsg   = "runner started"
+	defaultRunnerLabel    = "self-hosted"
+	runnerStartedMsg      = "runner started"
+	githubWebhookEventKey = "github_webhook_event"
 )
 
 // apiResponse is a structure that contains a http status code,
@@ -115,7 +117,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			logger.InfoContext(ctx, "Workflow job queued", baseLogFields...)
 
 			if !slices.Contains(event.WorkflowJob.Labels, defaultRunnerLabel) {
-				logger.InfoContext(ctx, "no action taken for labels", append(baseLogFields, "labels", event.WorkflowJob.Labels)...)
+				logger.WarnContext(ctx, "no action taken for labels", append(baseLogFields, "labels", event.WorkflowJob.Labels)...)
 				return &apiResponse{http.StatusOK, fmt.Sprintf("no action taken for labels: %s", event.WorkflowJob.Labels), nil}
 			}
 
@@ -174,7 +176,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 				return &apiResponse{http.StatusInternalServerError, "failed to run build", err}
 			}
 
-			logger.InfoContext(ctx, runnerStartedMsg, baseLogFields...)
+			logger.InfoContext(ctx, runnerStartedMsg, slog.Any(githubWebhookEventKey, event))
 			return &apiResponse{http.StatusOK, runnerStartedMsg, nil}
 
 		case "in_progress":
