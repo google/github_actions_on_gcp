@@ -1,0 +1,110 @@
+name: 'Deploy and Test Webhook PR'
+
+on:
+  workflow_run:
+    workflows: ['build_webhook_container']
+    types:
+      - 'completed'
+
+env:
+  WIF_PROVIDER: 'projects/727875687543/locations/global/workloadIdentityPools/github-actions-on-gcp-p-a63b4c/providers/github-actions-on-gcp-p-a63b4c'
+  WIF_SERVICE_ACCOUNT: 'github-automation-bot@gha-on-gcp-p-a63b4c.iam.gserviceaccount.com'
+  DOCKER_REPO: 'us-docker.pkg.dev/ghss-artifacts-p-25/docker-images'
+  IMAGE_NAME: 'gha-webhook'
+  AUTOPUSH_PROJECT_ID: 'action-dispatcher-webhook-a-18'
+  AUTOPUSH_REGION: 'us-central1'
+
+permissions:
+  contents: 'read'
+  id-token: 'write'
+
+jobs:
+  deploy:
+    if: 'github.event.workflow_run.event == "pull_request" && github.event.workflow_run.conclusion == "success"'
+    runs-on: 'ubuntu-latest'
+    outputs:
+      service_name: '${{ steps.deploy.outputs.service_name }}'
+      service_url: '${{ steps.deploy.outputs.service_url }}'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@v4'
+
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@a6e2e39c0a0331da29f7fd2c2a20a427e8d3ad1f' # ratchet:google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ env.WIF_PROVIDER }}'
+          service_account: '${{ env.WIF_SERVICE_ACCOUNT }}'
+          token_format: 'access_token'
+
+      - name: 'Setup gcloud'
+        uses: 'google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200' # ratchet:google-github-actions/v2
+        with:
+          version: '460.0.0'
+
+      - name: 'Deploy to Cloud Run'
+        id: 'deploy'
+        run: |-
+          SERVICE_NAME='webhook-pr-${{ github.event.workflow_run.pull_requests[0].number }}'
+          IMAGE_TAG='webhook-pr-${{ github.event.workflow_run.pull_requests[0].number }}-${{ github.event.workflow_run.head_sha }}'
+          SERVICE_URL=$(gcloud run deploy ${SERVICE_NAME} \
+            --project='${{ env.AUTOPUSH_PROJECT_ID }}' \
+            --region='${{ env.AUTOPUSH_REGION }}' \
+            --image='${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}-amd64' \
+            --no-allow-unauthenticated \
+            --format='value(status.url)')
+          echo "service_url=${SERVICE_URL}" >> $GITHUB_OUTPUT
+          echo "service_name=${SERVICE_NAME}" >> $GITHUB_OUTPUT
+
+  test:
+    needs: 'deploy'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@v4'
+
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@a6e2e39c0a0331da29f7fd2c2a20a427e8d3ad1f' # ratchet:google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ env.WIF_PROVIDER }}'
+          service_account: '${{ env.WIF_SERVICE_ACCOUNT }}'
+          token_format: 'access_token'
+
+      - name: 'Setup gcloud'
+        uses: 'google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200' # ratchet:google-github-actions/v2
+        with:
+          version: '460.0.0'
+
+      - name: 'Run Tests'
+        run: |-
+          URL='${{ needs.deploy.outputs.service_url }}'
+          echo "Testing service at ${URL}"
+          # TODO: Add test commands here, for example:
+          # curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" ${URL}
+
+  cleanup:
+    needs: ['deploy', 'test']
+    if: 'always()'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@a6e2e39c0a0331da29f7fd2c2a20a427e8d3ad1f' # ratchet:google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ env.WIF_PROVIDER }}'
+          service_account: '${{ env.WIF_SERVICE_ACCOUNT }}'
+          token_format: 'access_token'
+
+      - name: 'Setup gcloud'
+        uses: 'google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200' # ratchet:google-github-actions/v2
+        with:
+          version: '460.0.0'
+
+      - name: 'Delete Cloud Run Service'
+        run: |-
+          SERVICE_NAME='${{ needs.deploy.outputs.service_name }}'
+          gcloud run services delete ${SERVICE_NAME} \
+            --project='${{ env.AUTOPUSH_PROJECT_ID }}' \
+            --region='${{ env.AUTOPUSH_REGION }}' \
+            --quiet

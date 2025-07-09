@@ -17,18 +17,18 @@ package webhook
 import (
 	"context"
 
-	cloudbuild "cloud.google.com/go/cloudbuild/apiv1/v2"
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 
 	"github.com/googleapis/gax-go/v2"
 )
 
 type MockCloudBuildClient struct {
-	createBuildRet *cloudbuild.CreateBuildOperation
+	createBuildReq *cloudbuildpb.CreateBuildRequest
 	createBuildErr error
 }
 
 func (m *MockCloudBuildClient) CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBuildRequest, opts ...gax.CallOption) error {
+	m.createBuildReq = req
 	if m.createBuildErr != nil {
 		return m.createBuildErr
 	}

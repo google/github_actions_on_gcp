@@ -19,6 +19,7 @@ import (
 	"html"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
@@ -121,6 +122,14 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 				return &apiResponse{http.StatusOK, fmt.Sprintf("no action taken for labels: %s", event.WorkflowJob.Labels), nil}
 			}
 
+			imageTag := s.runnerImageTag
+			for _, label := range event.WorkflowJob.Labels {
+				if strings.HasPrefix(label, "pr-") {
+					imageTag = label
+					break
+				}
+			}
+
 			if event.Installation == nil || event.Installation.ID == nil || event.Org == nil || event.Org.Login == nil || event.Repo == nil || event.Repo.Name == nil {
 				err := fmt.Errorf("event is missing required fields (installation, org, or repo)")
 				logger.ErrorContext(ctx, "cannot generate JIT config due to missing event data", append(baseLogFields, "error", err)...)
@@ -155,7 +164,7 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 					"_ENCODED_JIT_CONFIG": *jitConfig.EncodedJITConfig,
 					"_REPOSITORY_ID":      s.runnerRepositoryID,
 					"_IMAGE_NAME":         s.runnerImageName,
-					"_IMAGE_TAG":          s.runnerImageTag,
+					"_IMAGE_TAG":          imageTag,
 				},
 			}
 
