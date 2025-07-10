@@ -123,10 +123,12 @@ func (s *Server) processRequest(r *http.Request) *apiResponse {
 			}
 
 			imageTag := s.runnerImageTag
-			for _, label := range event.WorkflowJob.Labels {
-				if strings.HasPrefix(label, "pr-") {
-					imageTag = label
-					break
+			if s.environment == "autopush" {
+				for _, label := range event.WorkflowJob.Labels {
+					if strings.HasPrefix(label, "pr-") {
+						imageTag = label
+						break
+					}
 				}
 			}
 
