@@ -29,7 +29,6 @@ import (
 	"testing"
 	"time"
 
-	cloudbuild "cloud.google.com/go/cloudbuild/apiv1/v2"
 	"github.com/abcxyz/pkg/githubauth"
 
 	"github.com/google/go-github/v69/github"
@@ -74,6 +73,8 @@ func TestHandleWebhook(t *testing.T) {
 		jobName              *string
 		expStatusCode        int
 		expRespBody          string
+		expectBuild          bool
+		expectedImageTag     string
 	}{
 		{
 			name:                 "Workflow Job Queued - Default Label",
@@ -90,6 +91,44 @@ func TestHandleWebhook(t *testing.T) {
 			jobName:              &jobName,
 			expStatusCode:        200,
 			expRespBody:          runnerStartedMsg,
+			expectBuild:          true,
+			expectedImageTag:     "latest",
+		},
+		{
+			name:                 "Workflow Job Queued - Dynamic Label Autopush",
+			payloadType:          payloadType,
+			action:               queuedAction,
+			runnerLabels:         []string{defaultRunnerLabel, "pr-123-abc"},
+			payloadWebhookSecret: serverGitHubWebhookSecret,
+			contentType:          contentType,
+			createdAt:            &queuedTime,
+			startedAt:            nil,
+			completedAt:          nil,
+			runID:                &runID,
+			jobID:                &jobID,
+			jobName:              &jobName,
+			expStatusCode:        200,
+			expRespBody:          runnerStartedMsg,
+			expectBuild:          true,
+			expectedImageTag:     "pr-123-abc",
+		},
+		{
+			name:                 "Workflow Job Queued - Dynamic Label Production",
+			payloadType:          payloadType,
+			action:               queuedAction,
+			runnerLabels:         []string{defaultRunnerLabel, "pr-123-abc"},
+			payloadWebhookSecret: serverGitHubWebhookSecret,
+			contentType:          contentType,
+			createdAt:            &queuedTime,
+			startedAt:            nil,
+			completedAt:          nil,
+			runID:                &runID,
+			jobID:                &jobID,
+			jobName:              &jobName,
+			expStatusCode:        200,
+			expRespBody:          runnerStartedMsg,
+			expectBuild:          true,
+			expectedImageTag:     "latest", // Should ignore dynamic label in prod
 		},
 		{
 			name:                 "Workflow Job Queued - No Matching Label",
@@ -106,6 +145,7 @@ func TestHandleWebhook(t *testing.T) {
 			jobName:              &jobName,
 			expStatusCode:        200,
 			expRespBody:          fmt.Sprintf("no action taken for labels: %s", []string{"other-label"}),
+			expectBuild:          false,
 		},
 		{
 			name:                 "Workflow Job In Progress",
@@ -122,6 +162,7 @@ func TestHandleWebhook(t *testing.T) {
 			jobName:              &jobName,
 			expStatusCode:        200,
 			expRespBody:          "workflow job in progress event logged",
+			expectBuild:          false,
 		},
 		{
 			name:                 "Workflow Job Completed - Success",
@@ -138,12 +179,21 @@ func TestHandleWebhook(t *testing.T) {
 			jobName:              &jobName,
 			expStatusCode:        200,
 			expRespBody:          "workflow job completed event logged",
+			expectBuild:          false,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			// Determine environment for the test case
+			var testEnv string
+			if strings.Contains(tc.name, "Autopush") {
+				testEnv = "autopush"
+			} else {
+				testEnv = "production"
+			}
 
 			orgLogin := "google"
 			repoName := "webhook"
@@ -222,15 +272,15 @@ func TestHandleWebhook(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			mockCloudBuildClient := &MockCloudBuildClient{
-				createBuildRet: &cloudbuild.CreateBuildOperation{},
-			}
+			mockCloudBuildClient := &MockCloudBuildClient{}
 
 			srv := &Server{
-				webhookSecret: []byte(tc.payloadWebhookSecret),
-				appClient:     app,
-				cbc:           mockCloudBuildClient,
-				ghAPIBaseURL:  fakeGitHub.URL,
+				webhookSecret:  []byte(tc.payloadWebhookSecret),
+				appClient:      app,
+				cbc:            mockCloudBuildClient,
+				ghAPIBaseURL:   fakeGitHub.URL,
+				runnerImageTag: "latest",
+				environment:    testEnv,
 			}
 			srv.handleWebhook().ServeHTTP(resp, req)
 
@@ -240,6 +290,19 @@ func TestHandleWebhook(t *testing.T) {
 
 			if got, want := strings.TrimSpace(resp.Body.String()), tc.expRespBody; got != want {
 				t.Errorf("expected %q to be %q", got, want)
+			}
+
+			if tc.expectBuild {
+				if mockCloudBuildClient.createBuildReq == nil {
+					t.Fatalf("expected a build to be created, but it was not")
+				}
+				if got, want := mockCloudBuildClient.createBuildReq.GetBuild().GetSubstitutions()["_IMAGE_TAG"], tc.expectedImageTag; got != want {
+					t.Errorf("expected image tag %q to be %q", got, want)
+				}
+			} else {
+				if mockCloudBuildClient.createBuildReq != nil {
+					t.Errorf("expected no build to be created, but a build was created with request: %v", mockCloudBuildClient.createBuildReq)
+				}
 			}
 		})
 	}

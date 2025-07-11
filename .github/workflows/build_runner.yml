@@ -48,7 +48,7 @@ jobs:
       - name: 'Setup gcloud'
         uses: 'google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200' # ratchet:google-github-actions/setup-gcloud@v2
         with:
-          version: '460.0.0'
+          version: '529.0.0'
 
       - uses: 'docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc' # ratchet:docker/login-action@v2
         with:
