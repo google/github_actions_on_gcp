@@ -26,6 +26,7 @@ import (
 // Config defines the set of environment variables required
 // for running the webhook service.
 type Config struct {
+	Environment               string `env:"ENVIRONMENT,default=production"`
 	GitHubAPIBaseURL          string `env:"GITHUB_API_BASE_URL,default=https://api.github.com"`
 	GitHubAppID               string `env:"GITHUB_APP_ID,required"`
 	GitHubWebhookKeyMountPath string `env:"WEBHOOK_KEY_MOUNT_PATH,required"`
@@ -43,6 +44,10 @@ type Config struct {
 
 // Validate validates the webhook config after load.
 func (cfg *Config) Validate() error {
+	if cfg.Environment != "production" && cfg.Environment != "autopush" {
+		return fmt.Errorf("ENVIRONMENT must be one of 'production' or 'autopush', got %q", cfg.Environment)
+	}
+
 	if cfg.GitHubAppID == "" {
 		return fmt.Errorf("GITHUB_APP_ID is required")
 	}
@@ -94,6 +99,14 @@ func newConfig(ctx context.Context, lu envconfig.Lookuper) (*Config, error) {
 // ToFlags binds the config to the [cli.FlagSet] and returns it.
 func (cfg *Config) ToFlags(set *cli.FlagSet) *cli.FlagSet {
 	f := set.NewSection("COMMON SERVER OPTIONS")
+
+	f.StringVar(&cli.StringVar{
+		Name:    "environment",
+		Target:  &cfg.Environment,
+		EnvVar:  "ENVIRONMENT",
+		Default: "production",
+		Usage:   `The execution environment (e.g., "autopush", "production"). Controls environment-specific features.`,
+	})
 
 	f.StringVar(&cli.StringVar{
 		Name:   "runner-location",

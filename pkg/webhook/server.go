@@ -36,6 +36,7 @@ import (
 type Server struct {
 	appClient            *githubauth.App
 	cbc                  CloudBuildClient
+	environment          string
 	ghAPIBaseURL         string
 	h                    *renderer.Renderer
 	kmc                  KeyManagementClient
@@ -124,6 +125,7 @@ func NewServer(ctx context.Context, h *renderer.Renderer, cfg *Config, wco *Webh
 	return &Server{
 		appClient:            appClient,
 		cbc:                  cbc,
+		environment:          cfg.Environment,
 		ghAPIBaseURL:         cfg.GitHubAPIBaseURL,
 		h:                    h,
 		kmc:                  kmc,
