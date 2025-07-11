@@ -145,9 +145,15 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error sending request for test case %q: %v\n", tc.name, err)
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
 
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			fmt.Fprintf(os.Stderr, "Error reading response body for test case %q: %v\n", tc.name, readErr)
+			resp.Body.Close() // Close the body before exiting
+			os.Exit(1)
+		}
+		resp.Body.Close() // Ensure the body is closed after reading
+
 		fmt.Printf("Response Status: %s\n", resp.Status)
 		fmt.Printf("Response Body: %s\n", string(body))
 
