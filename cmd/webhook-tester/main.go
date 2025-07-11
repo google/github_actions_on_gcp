@@ -39,7 +39,6 @@ func generateSignature(payload []byte, secret string) (string, error) {
 type testCase struct {
 	name               string
 	payload            string
-	signatureHeader    string
 	eventHeader        string
 	expectedStatusCode int
 	signer             func(payload []byte, secret string) (string, error)
@@ -86,7 +85,6 @@ func main() {
 		{
 			name:               "invalid signature",
 			payload:            validPayload,
-			signatureHeader:    "sha256=invalid",
 			eventHeader:        "workflow_job",
 			expectedStatusCode: http.StatusInternalServerError,
 			signer: func(p []byte, s string) (string, error) {
