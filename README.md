@@ -105,7 +105,7 @@ If this secret needs to be rotated, follow these steps:
     You must have the `secretmanager.secretVersionAdder` IAM role on the `action-dispatcher-webhook-a-18` project to perform this action.
 
     ```shell
-    printf "YOUR_NEW_SECRET_VALUE" | gcloud secrets versions add "webhook-pr-test-secret" --data-file=- --project="action-dispatcher-webhook-a-18"
+    printf "YOUR_NEW_SECRET_VALUE\n" | gcloud secrets versions add "webhook-pr-test-secret" --data-file=- --project="action-dispatcher-webhook-a-18"
     ```
 
 3.  The CI/CD workflow will automatically pick up the `latest` version of the secret.
