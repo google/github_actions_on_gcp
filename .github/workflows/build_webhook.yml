@@ -1,6 +1,6 @@
 name: 'build_webhook_container'
 
-on: 
+on:
   push:
     branches:
       - 'main'
