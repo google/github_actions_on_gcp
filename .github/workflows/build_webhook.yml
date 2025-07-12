@@ -74,7 +74,7 @@ jobs:
           git tag -f "$(date "+%Y%m%d%H%M%S")"
 
       - name: 'Set Docker Tag for PR'
-        if: ${{ github.event_name == 'pull_request' }}
+        if: 'github.event_name == ''pull_request'''
         run: 'echo "DOCKER_TAG=webhook-pr-${{ github.event.number }}-${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV'
 
       - name: 'Build the server container and push to the registry with goreleaser'
@@ -84,7 +84,7 @@ jobs:
           args: 'release -f .goreleaser.docker.yml --rm-dist --skip-validate'
 
       - name: 'Deploy to Cloud Run'
-        if: ${{ github.event_name != 'pull_request' }}
+        if: 'github.event_name != ''pull_request'''
         run: |-
           gcloud run services update ${{ env.INTEGRATION_SERVICE_NAME }} \
             --project="${{ env.INTEGRATION_PROJECT_ID }}" \

@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@v4'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
@@ -67,6 +69,8 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@v4'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
