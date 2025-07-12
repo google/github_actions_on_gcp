@@ -6,11 +6,15 @@ on:
       - 'main'
     paths:
       - 'cmd/github-actions-on-gcp/**'
+      - 'cmd/webhook-tester/**'
       - 'pkg/**'
+      - '.github/workflows/deploy_and_test_webhook_pr.yml'
   pull_request:
     paths:
       - 'cmd/github-actions-on-gcp/**'
+      - 'cmd/webhook-tester/**'
       - 'pkg/**'
+      - '.github/workflows/deploy_and_test_webhook_pr.yml'
   workflow_dispatch:
 
 env:

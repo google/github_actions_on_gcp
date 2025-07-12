@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@v4'
+        with:
+          ref: '${{ github.event.workflow_run.head_sha }}'
 
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
@@ -45,13 +47,18 @@ jobs:
       - name: 'Deploy to Cloud Run'
         id: 'deploy'
         run: |-
-          SERVICE_NAME='webhook-pr-${{ github.event.workflow_run.pull_requests[0].number }}'
-          IMAGE_TAG='webhook-pr-${{ github.event.workflow_run.pull_requests[0].number }}-${{ github.event.workflow_run.head_sha }}'
+          SERVICE_NAME="webhook-pr-${{ github.event.workflow_run.pull_requests[0].number }}"
+          IMAGE_TAG="webhook-pr-${{ github.event.workflow_run.pull_requests[0].number }}-${{ github.event.workflow_run.head_sha }}"
+          WEBHOOK_SECRET_MOUNT_PATH="/etc/secrets/webhook-pr-test-key"
+          WEBHOOK_SECRET_NAME="latest"
+
           SERVICE_URL=$(gcloud run deploy ${SERVICE_NAME} \
-            --project='${{ env.AUTOPUSH_PROJECT_ID }}' \
-            --region='${{ env.AUTOPUSH_REGION }}' \
-            --image='${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}-amd64' \
+            --project="${{ env.AUTOPUSH_PROJECT_ID }}" \
+            --region="${{ env.AUTOPUSH_REGION }}" \
+            --image="${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}-amd64" \
             --no-allow-unauthenticated \
+            --set-secrets="${WEBHOOK_SECRET_MOUNT_PATH}/${WEBHOOK_SECRET_NAME}=webhook-pr-test-secret:latest" \
+            --update-env-vars="WEBHOOK_KEY_MOUNT_PATH=${WEBHOOK_SECRET_MOUNT_PATH},WEBHOOK_KEY_NAME=${WEBHOOK_SECRET_NAME}" \
             --format='value(status.url)')
           echo "service_url=${SERVICE_URL}" >> $GITHUB_OUTPUT
           echo "service_name=${SERVICE_NAME}" >> $GITHUB_OUTPUT
@@ -62,6 +69,8 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@v4'
+        with:
+          ref: '${{ github.event.workflow_run.head_sha }}'
 
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
@@ -76,12 +85,16 @@ jobs:
         with:
           version: '529.0.0'
 
-      - name: 'Run Tests'
+      - name: 'Setup Go'
+        uses: 'actions/setup-go@v5'
+        with:
+          go-version: '1.22'
+
+      - name: 'Run Webhook Tester'
         run: |-
-          URL='${{ needs.deploy.outputs.service_url }}'
-          echo "Testing service at ${URL}"
-          # TODO: Add test commands here, for example:
-          # curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" ${URL}
+          set -euo pipefail
+          SECRET=$(gcloud secrets versions access latest --secret="webhook-pr-test-secret" --project="${{ env.AUTOPUSH_PROJECT_ID }}")
+          go run ./cmd/webhook-tester --url="${{ needs.deploy.outputs.service_url }}" --secret="${SECRET}"
 
   cleanup:
     needs: ['deploy', 'test']
