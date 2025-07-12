@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   deploy:
-    if: "github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'"
+    if: 'github.event.workflow_run.event == "pull_request" && github.event.workflow_run.conclusion == "success"'
     runs-on: 'ubuntu-latest'
     outputs:
       service_name: '${{ steps.deploy.outputs.service_name }}'
